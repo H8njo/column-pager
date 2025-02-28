@@ -87,3 +87,118 @@ textarea:not([rows]) {
 :target {
   scroll-margin-block: 5ex;
 }
+
+/* FIXME: 테스트용 나중에 지워야함 */
+
+/* 지시문 - 발문영역 */
+.rubric.passage {
+  /* display: flex; */
+  /* width: 256px; */
+  /* align-items: center; */
+  text-align: justify;
+  gap: 3.132px;
+  font-family: "Pretendard";
+  margin-bottom: 16px;
+}
+
+.contents.passage + .rubric.question {
+  margin-top: 16px;
+}
+
+/* 지시문 - 질문영역 */
+.rubric.question {
+  /* display: flex; */
+  /* width: 256px; */
+  /* align-items: center; */
+  text-align: justify;
+  gap: 3.132px;
+  font-family: "Pretendard";
+  margin-bottom: 16px;
+}
+
+/* 본문 */
+.contents {
+  text-align: justify;
+  gap: 8px;
+}
+
+.contents > span {
+  display: inline-block;
+  text-align: justify;
+}
+
+/* 보기 */
+.example {
+  /* border: 0.5px solid var(--Gray-black, #12141F); */
+  border: 0.5px solid #12141f;
+  padding: 0.5em;
+  margin-bottom: 16px;
+  margin-top: 16px;
+}
+
+.example-header {
+  /* color: var(--sol_BW-black, var(--Gray-black, #12141F)); */
+  text-align: center;
+  /* font-family: "Nanum Myeongjo"; */
+  /* font-size: 8.5px; */
+  font-style: normal;
+  font-weight: 400;
+  line-height: 160%; /* 13.6px */
+}
+
+.example-content {
+  /* display: flex; */
+  text-align: center;
+  /* justify-content: center; */
+  /* align-items: center; */
+  gap: 8px;
+  /* align-self: stretch; */
+}
+
+/* 조건 */
+.condition {
+  /* border: 0.5px solid var(--Gray-black, #12141F); */
+  border: 0.5px solid #12141f;
+  padding: 0.5em;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.condition-header {
+  /* color: var(--sol_BW-black, var(--Gray-black, #12141F)); */
+  text-align: center;
+  /* font-family: "Nanum Myeongjo"; */
+  /* font-size: 8.5px; */
+  font-style: normal;
+  font-weight: 400;
+  line-height: 160%; /* 13.6px */
+}
+
+.condition-content {
+  /* color: var(--sol_BW-black, var(--Gray-black, #12141F)); */
+  text-align: justify;
+  /* font-family: "Nanum Myeongjo"; */
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 160%; /* 13.6px */
+}
+
+/* 객관식 선택지 */
+.choice-set {
+  /* display: inline-flex; */
+  /* flex-direction: column; */
+  /* align-items: flex-start; */
+  text-align: justify;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* 주관식 입력란 */
+.open-ended-set {
+  /* display: inline-flex; */
+  /* flex-direction: column; */
+  /* align-items: flex-start; */
+  text-align: justify;
+  gap: 16px;
+}
