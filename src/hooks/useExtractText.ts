@@ -1,18 +1,69 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, RefObject } from "react";
 
 type ExtractTextProps = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  contentsAreaRef: RefObject<HTMLDivElement | null>;
+  columnGapOffset: number;
 };
 
-const useExtractText = ({ x, y, width, height }: ExtractTextProps, columnGapOffset: number) => {
+const useExtractText = ({ contentsAreaRef, columnGapOffset }: ExtractTextProps) => {
   const [extractedText, setExtractedText] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
+  const [contentsRect, setContentsRect] = useState<DOMRect>();
 
-  const getTextFromCoordinates = (x: number, y: number, width: number, height: number): string => {
+  useEffect(() => {
+    if (!contentsAreaRef.current) return;
+    // Contents 부분의 영역을 가져옴
+    const rect = contentsAreaRef.current.getBoundingClientRect();
+    setContentsRect(rect);
+  }, [contentsAreaRef]);
+
+  // 실제 텍스트 감지에 사용될 영역 계산
+  const getDetectionCoordinates = () => {
+    if (!contentsRect) return { x: 0, y: 0, width: 0, height: 0 };
+
+    const baseRect = contentsRect;
+
+    return {
+      x: baseRect.x + baseRect.width + columnGapOffset,
+      y: baseRect.y,
+      width: baseRect.width,
+      height: baseRect.height,
+    };
+  };
+
+  const getTextFromCoordinates = (detectionCoords: { x: number; y: number; width: number; height: number }): string => {
+    if (!contentsRect) return "";
+
+    const { x, y, width, height } = detectionCoords;
     const textContent: string[] = [];
+
+    const extractVisibleText = (
+      node: Node,
+      range: Range,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ): string | null => {
+      if (!node.textContent) return null;
+
+      let visibleText = "";
+      const text = node.textContent.trim();
+
+      for (let i = 0; i < text.length; i++) {
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const rects = range.getClientRects();
+
+        for (const rect of rects) {
+          if (!(rect.right < x || rect.left > x + width || rect.bottom < y || rect.top > y + height)) {
+            visibleText += text[i];
+          }
+        }
+      }
+
+      return visibleText.trim() || null;
+    };
 
     function checkTextNodes(node: Node) {
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
@@ -51,39 +102,17 @@ const useExtractText = ({ x, y, width, height }: ExtractTextProps, columnGapOffs
     return [...new Set(textContent)].join(" ");
   };
 
-  const extractVisibleText = (
-    node: Node,
-    range: Range,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): string | null => {
-    if (!node.textContent) return null;
-
-    let visibleText = "";
-    const text = node.textContent.trim();
-
-    for (let i = 0; i < text.length; i++) {
-      range.setStart(node, i);
-      range.setEnd(node, i + 1);
-      const rects = range.getClientRects();
-
-      for (const rect of rects) {
-        if (!(rect.right < x || rect.left > x + width || rect.bottom < y || rect.top > y + height)) {
-          visibleText += text[i];
-        }
-      }
+  const extractText = () => {
+    if (!contentsRect) {
+      setExtractedText("");
+      return;
     }
 
-    return visibleText.trim() || null;
-  };
-
-  const extractText = () => {
     setIsExtracting(true);
     setTimeout(() => {
       try {
-        const text = getTextFromCoordinates(x, y, width, height);
+        const detectionCoords = getDetectionCoordinates();
+        const text = getTextFromCoordinates(detectionCoords);
         setExtractedText(text);
       } catch (error) {
         console.error("텍스트 추출 중 오류:", error);
@@ -95,26 +124,29 @@ const useExtractText = ({ x, y, width, height }: ExtractTextProps, columnGapOffs
   };
 
   useEffect(() => {
+    if (!contentsAreaRef.current || !contentsRect) return;
+
     extractText();
 
     const debugElement = document.createElement("div");
+
     Object.assign(debugElement.style, {
       position: "absolute",
-      left: `${width + columnGapOffset}px`,
-      top: 0,
-      width: `${width}px`,
-      height: `${height}px`,
+      left: `${columnGapOffset + contentsRect.width}px`,
+      top: "0",
+      width: `${contentsRect.width}px`,
+      height: `${contentsRect.height}px`,
       border: "2px dashed red",
       pointerEvents: "none",
       zIndex: "9999",
     });
 
-    const parentElement = document.getElementById("column-pager"); // 특정 ID 선택
-    parentElement?.appendChild(debugElement);
     return () => {
-      parentElement?.removeChild(debugElement);
+      if (contentsAreaRef.current && debugElement.parentNode === contentsAreaRef.current) {
+        contentsAreaRef.current.removeChild(debugElement);
+      }
     };
-  }, [x, y, width, height]);
+  }, [contentsRect]);
 
   return { extractedText, isExtracting, extractText };
 };
