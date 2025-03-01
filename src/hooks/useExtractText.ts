@@ -7,7 +7,7 @@ type ExtractTextProps = {
   height: number;
 };
 
-const useExtractText = ({ x, y, width, height }: ExtractTextProps, columnGap: number) => {
+const useExtractText = ({ x, y, width, height }: ExtractTextProps, columnGapOffset: number) => {
   const [extractedText, setExtractedText] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
 
@@ -100,7 +100,7 @@ const useExtractText = ({ x, y, width, height }: ExtractTextProps, columnGap: nu
     const debugElement = document.createElement("div");
     Object.assign(debugElement.style, {
       position: "absolute",
-      left: `${width + columnGap}px`,
+      left: `${width + columnGapOffset}px`,
       top: 0,
       width: `${width}px`,
       height: `${height}px`,
