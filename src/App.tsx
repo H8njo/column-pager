@@ -1,5 +1,5 @@
 import "./global.css";
-import Test from "./components/Test";
+import ColumnPager from "./components/ColumnPager";
 import useDataTransformer from "./hooks/useDataTransformer";
 import styled from "@emotion/styled";
 
@@ -8,7 +8,7 @@ function App() {
 
   return (
     <div style={{ padding: 40 }}>
-      <Test
+      <ColumnPager
         columnGap={60}
         pageStyle={{ backgroundColor: "white" }}
         header={<Header />}
@@ -32,7 +32,7 @@ function App() {
             );
           })}
         </div>
-      </Test>
+      </ColumnPager>
     </div>
   );
 }

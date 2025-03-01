@@ -4,7 +4,7 @@ import useOverflowDetector from "../hooks/useOverflowDetector";
 import useExtractText from "../hooks/useExtractText";
 import styled from "@emotion/styled";
 
-type TestProps = {
+type ColumnPagerProps = {
   columnGap?: number;
   pageStyle?: React.CSSProperties;
   dividerStyle?: React.CSSProperties;
@@ -12,7 +12,7 @@ type TestProps = {
   footer?: ReactNode;
   columnCount?: number;
 };
-const Test = ({
+const ColumnPager = ({
   header,
   footer,
   columnGap = 0,
@@ -20,7 +20,7 @@ const Test = ({
   dividerStyle,
   columnCount = 2,
   children,
-}: PropsWithChildren<TestProps>) => {
+}: PropsWithChildren<ColumnPagerProps>) => {
   const [area, setArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const { overflowCheckRef } = useOverflowDetector();
   const { extractedText } = useExtractText(area, columnGap);
@@ -105,4 +105,4 @@ const OverflowDetector = styled("div")({
   zIndex: -1,
 });
 
-export default Test;
+export default ColumnPager;
