@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from "react";
+import { useState, useEffect, RefObject, useCallback } from "react";
 
 type ExtractTextProps = {
   contentsAreaRef: RefObject<HTMLDivElement | null>;
@@ -11,12 +11,16 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: Extract
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
   const [contentsRect, setContentsRect] = useState<DOMRect>();
 
-  useEffect(() => {
-    if (!contentsAreaRef.current) return;
-    // Contents 부분의 영역을 가져옴
+  const reExtractText = useCallback(() => {
+    if (!contentsAreaRef.current) return null;
     const rect = contentsAreaRef.current.getBoundingClientRect();
     setContentsRect(rect);
+    return rect;
   }, [contentsAreaRef]);
+
+  useEffect(() => {
+    reExtractText();
+  }, [reExtractText]);
 
   // 실제 텍스트 감지에 사용될 영역 계산
   const getDetectionCoordinates = () => {
@@ -162,7 +166,7 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: Extract
     };
   }, [contentsRect]);
 
-  return { extractedText, isExtracting, extractText };
+  return { extractedText, isExtracting, extractText, reExtractText };
 };
 
 export default useExtractText;

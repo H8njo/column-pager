@@ -1,13 +1,24 @@
 import "./global.css";
-import ColumnPager from "./components/ColumnPager";
+import ColumnPager, { ColumnPagerHandle } from "./components/ColumnPager";
 import useDataTransformer from "./hooks/useDataTransformer";
 import styled from "@emotion/styled";
+import { useRef } from "react";
 
 function App() {
+  const columnPagerRef = useRef<ColumnPagerHandle>(null);
+
   const { data } = useDataTransformer();
+
+  const handleExtractText = () => {
+    if (columnPagerRef.current) {
+      columnPagerRef.current.reExtractText();
+    }
+  };
 
   return (
     <div style={{ padding: 40 }}>
+      <button onClick={handleExtractText}>텍스트 추출</button>
+
       <ColumnPager
         columnGap={60}
         pageStyle={{ backgroundColor: "white" }}
@@ -15,6 +26,7 @@ function App() {
         footer={<Footer />}
         columnCount={3}
         debugMode={true}
+        ref={columnPagerRef}
       >
         <div style={{ fontFamily: "Nanum Myeongjo, serif", fontSize: "0.825rem" }}>
           {data.map(({ items, startNumber, endNumber }, idx) => {
