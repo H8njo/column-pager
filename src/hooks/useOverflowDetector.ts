@@ -1,9 +1,9 @@
 import { useRef } from "react";
 
 const useOverflowDetector = () => {
-  const detectorRef = useRef(null);
+  const overflowCheckRef = useRef<HTMLDivElement>(null);
   return {
-    detectorRef,
+    overflowCheckRef,
   };
 };
 

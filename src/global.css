@@ -123,7 +123,9 @@ textarea:not([rows]) {
 }
 
 .contents > span {
-  display: inline-block;
+  /* FIXME: 이번에 수정함 (컬럼 break를 위해) */
+  /* display: inline-block; */
+  display: block;
   text-align: justify;
 }
 
