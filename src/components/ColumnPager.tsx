@@ -10,6 +10,7 @@ type ColumnPagerProps = {
   header?: ReactNode;
   footer?: ReactNode;
   columnCount?: number;
+  debugMode?: boolean;
 };
 
 const ColumnPager = ({
@@ -19,10 +20,11 @@ const ColumnPager = ({
   pageStyle,
   dividerStyle,
   columnCount = 2,
+  debugMode = false,
   children,
 }: PropsWithChildren<ColumnPagerProps>) => {
   const contentsAreaRef = useRef<HTMLDivElement>(null);
-  const { extractedText } = useExtractText({ contentsAreaRef, columnGapOffset: columnGap });
+  const { extractedText } = useExtractText({ contentsAreaRef, columnGapOffset: columnGap, debugMode });
 
   console.log(extractedText);
   return (
@@ -30,7 +32,7 @@ const ColumnPager = ({
       {header}
       <Contents ref={contentsAreaRef}>
         <Divider columnCount={columnCount} style={dividerStyle} />
-        <ColumnGenerator columnGap={columnGap} columnCount={columnCount} id="column-pager">
+        <ColumnGenerator columnGap={columnGap} columnCount={columnCount} debugMode={debugMode}>
           {children}
         </ColumnGenerator>
       </Contents>
@@ -53,14 +55,16 @@ const Page = styled.div({
   aspectRatio: "210 / 297",
 });
 
-const ColumnGenerator = styled.div<{ columnGap: number; columnCount: number }>(({ columnGap, columnCount }) => ({
-  width: "100%",
-  height: "100%",
-  columnCount,
-  columnGap,
-  columnFill: "auto",
-  position: "relative",
-  // overflow: "hidden",
-}));
+const ColumnGenerator = styled.div<{ columnGap: number; columnCount: number; debugMode: boolean }>(
+  ({ columnGap, columnCount, debugMode }) => ({
+    width: "100%",
+    height: "100%",
+    columnCount,
+    columnGap,
+    columnFill: "auto",
+    position: "relative",
+    overflow: debugMode ? "visible" : "hidden",
+  }),
+);
 
 export default ColumnPager;

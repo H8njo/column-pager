@@ -14,6 +14,7 @@ function App() {
         header={<Header />}
         footer={<Footer />}
         columnCount={3}
+        debugMode={true}
       >
         <div style={{ fontFamily: "Nanum Myeongjo, serif", fontSize: "0.825rem" }}>
           {data.map(({ items, startNumber, endNumber }, idx) => {

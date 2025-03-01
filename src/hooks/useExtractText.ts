@@ -3,9 +3,10 @@ import { useState, useEffect, RefObject } from "react";
 type ExtractTextProps = {
   contentsAreaRef: RefObject<HTMLDivElement | null>;
   columnGapOffset: number;
+  debugMode?: boolean;
 };
 
-const useExtractText = ({ contentsAreaRef, columnGapOffset }: ExtractTextProps) => {
+const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: ExtractTextProps) => {
   const [extractedText, setExtractedText] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
   const [contentsRect, setContentsRect] = useState<DOMRect>();
@@ -128,7 +129,9 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset }: ExtractTextProps) 
 
     extractText();
 
+    if (!debugMode) return;
     const debugElement = document.createElement("div");
+    const detectionCoords = getDetectionCoordinates();
 
     Object.assign(debugElement.style, {
       position: "absolute",
@@ -140,6 +143,17 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset }: ExtractTextProps) 
       pointerEvents: "none",
       zIndex: "9999",
     });
+
+    console.log("Contents 컴포넌트 위치:", {
+      left: `${columnGapOffset + contentsRect.width}px`,
+      top: "0",
+      width: `${contentsRect.width}px`,
+      height: `${contentsRect.height}px`,
+    });
+
+    console.log("텍스트 감지 영역:", detectionCoords);
+
+    contentsAreaRef.current.appendChild(debugElement);
 
     return () => {
       if (contentsAreaRef.current && debugElement.parentNode === contentsAreaRef.current) {
