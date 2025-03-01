@@ -7,8 +7,8 @@ function App() {
   const { data } = useDataTransformer();
 
   return (
-    <div style={{ padding: 100 }}>
-      <Test columnGap={60} pageStyle={{ padding: 50 }} dividerStyle={{ backgroundColor: "red", paddingTop: 50 }}>
+    <div style={{ padding: 40 }}>
+      <Test columnGap={60} pageStyle={{ backgroundColor: "white" }} header={<Header />} footer={<Footer />}>
         <div style={{ fontFamily: "Nanum Myeongjo, serif", fontSize: "0.825rem" }}>
           {data.map(({ items, startNumber, endNumber }, idx) => {
             return (
@@ -30,6 +30,39 @@ function App() {
     </div>
   );
 }
+const Header = () => {
+  return (
+    <div style={{ borderBottom: "2px solid black", paddingLeft: 30, paddingRight: 30, paddingBottom: 20 }}>
+      <h1>Hoonjo</h1>
+      <p style={{ fontSize: 12 }}>
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's
+        standard dummy text ever since the 1500s, when an unknown
+      </p>
+    </div>
+  );
+};
+
+const Footer = () => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        fontSize: "10px",
+        height: 50,
+        alignItems: "center",
+        borderTop: "2px solid black",
+        paddingLeft: 30,
+        paddingRight: 30,
+      }}
+    >
+      <span>Lorem Ipsum is </span>
+      <span>Lorem Ipsum is simply dummy text of the printing and typesetting industry</span>
+      <span>Lorem Ipsum is </span>
+    </div>
+  );
+};
 
 const Section = styled("div")`
   border: 2px solid transparent;

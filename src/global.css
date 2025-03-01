@@ -204,3 +204,6 @@ textarea:not([rows]) {
   text-align: justify;
   gap: 16px;
 }
+body {
+  background-color: rgb(163, 163, 163);
+}

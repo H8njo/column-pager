@@ -8,8 +8,10 @@ type TestProps = {
   columnGap?: number;
   pageStyle?: React.CSSProperties;
   dividerStyle?: React.CSSProperties;
+  header?: ReactNode;
+  footer?: ReactNode;
 };
-const Test = ({ columnGap = 0, pageStyle, dividerStyle, children }: PropsWithChildren<TestProps>) => {
+const Test = ({ header, footer, columnGap = 0, pageStyle, dividerStyle, children }: PropsWithChildren<TestProps>) => {
   const [area, setArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const { overflowCheckRef } = useOverflowDetector();
   const { extractedText } = useExtractText(area, columnGap);
@@ -22,17 +24,26 @@ const Test = ({ columnGap = 0, pageStyle, dividerStyle, children }: PropsWithChi
   console.log(extractedText);
   return (
     <Page style={pageStyle}>
-      <ColumnGenerator columnGap={columnGap} id="column-pager">
+      {header}
+      <Contents>
         <ColumnDvider style={dividerStyle} />
-        <OverflowDetector ref={overflowCheckRef} />
-        {children}
-      </ColumnGenerator>
+        <ColumnGenerator columnGap={columnGap} id="column-pager">
+          <OverflowDetector ref={overflowCheckRef} />
+          {children}
+        </ColumnGenerator>
+      </Contents>
+      {footer}
     </Page>
   );
 };
+const Contents = styled("div")({
+  flexGrow: 1,
+  height: 0,
+  padding: 30,
+  position: "relative",
+});
 
 const Page = styled("div")({
-  backgroundColor: "ButtonFace",
   position: "relative",
   display: "flex",
   flexDirection: "column",
@@ -56,7 +67,7 @@ const ColumnGenerator = styled("div")<{ columnGap: number }>(({ columnGap }) => 
   columnGap: columnGap,
   columnFill: "auto",
   position: "relative",
-  // overflow: "hidden",
+  overflow: "hidden",
 }));
 
 const OverflowDetector = styled("div")({
