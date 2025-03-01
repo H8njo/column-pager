@@ -1,43 +1,41 @@
-import { useState, useEffect, RefObject, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 type ExtractTextProps = {
-  contentsAreaRef: RefObject<HTMLDivElement | null>;
-  columnGapOffset: number;
+  detectionRect: DOMRect | undefined;
+  tolerance?: { x?: number; y?: number };
   debugMode?: boolean;
 };
 
-const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: ExtractTextProps) => {
+/**
+ * DOMRect 값을 받아 해당 위치의 text를 추출하는 hook
+ * @param detectionRect 감지할 좌표값
+ * @param tolerance 감지 오차범위
+ * @param debugMode
+ * @returns
+ */
+const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }: ExtractTextProps) => {
   const [extractedText, setExtractedText] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
-  const [contentsRect, setContentsRect] = useState<DOMRect>();
 
-  const reExtractText = useCallback(() => {
-    if (!contentsAreaRef.current) return null;
-    const rect = contentsAreaRef.current.getBoundingClientRect();
-    setContentsRect(rect);
-    return rect;
-  }, [contentsAreaRef]);
-
-  useEffect(() => {
-    reExtractText();
-  }, [reExtractText]);
+  const toleranceX = tolerance.x || 0;
+  const toleranceY = tolerance.y || 0;
 
   // 실제 텍스트 감지에 사용될 영역 계산
   const getDetectionCoordinates = () => {
-    if (!contentsRect) return { x: 0, y: 0, width: 0, height: 0 };
+    if (!detectionRect) return { x: 0, y: 0, width: 0, height: 0 };
 
-    const baseRect = contentsRect;
+    const baseRect = detectionRect;
 
     return {
-      x: baseRect.x + baseRect.width + columnGapOffset,
-      y: baseRect.y,
+      x: baseRect.x + baseRect.width + toleranceX,
+      y: baseRect.y + toleranceY,
       width: baseRect.width,
       height: baseRect.height,
     };
   };
 
   const getTextFromCoordinates = (detectionCoords: { x: number; y: number; width: number; height: number }): string => {
-    if (!contentsRect) return "";
+    if (!detectionRect) return "";
 
     const { x, y, width, height } = detectionCoords;
     const textContent: string[] = [];
@@ -108,7 +106,7 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: Extract
   };
 
   const extractText = () => {
-    if (!contentsRect) {
+    if (!detectionRect) {
       setExtractedText("");
       return;
     }
@@ -129,7 +127,7 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: Extract
   };
 
   useEffect(() => {
-    if (!contentsAreaRef.current || !contentsRect) return;
+    if (!detectionRect) return;
 
     extractText();
 
@@ -139,34 +137,33 @@ const useExtractText = ({ contentsAreaRef, columnGapOffset, debugMode }: Extract
 
     Object.assign(debugElement.style, {
       position: "absolute",
-      left: `${columnGapOffset + contentsRect.width}px`,
-      top: "0",
-      width: `${contentsRect.width}px`,
-      height: `${contentsRect.height}px`,
+      left: `${toleranceX + detectionRect.width}px`,
+      top: `${0 + toleranceY}px`,
+      width: `${detectionRect.width}px`,
+      height: `${detectionRect.height}px`,
       border: "2px dashed red",
       pointerEvents: "none",
       zIndex: "9999",
     });
 
     console.log("Contents 컴포넌트 위치:", {
-      left: `${columnGapOffset + contentsRect.width}px`,
+      left: `${detectionRect.width}px`,
       top: "0",
-      width: `${contentsRect.width}px`,
-      height: `${contentsRect.height}px`,
+      width: `${detectionRect.width}px`,
+      height: `${detectionRect.height}px`,
     });
 
     console.log("텍스트 감지 영역:", detectionCoords);
 
-    contentsAreaRef.current.appendChild(debugElement);
+    const contentsArea = document.getElementById("column-pager-contents-area");
+    contentsArea?.appendChild(debugElement);
 
     return () => {
-      if (contentsAreaRef.current && debugElement.parentNode === contentsAreaRef.current) {
-        contentsAreaRef.current.removeChild(debugElement);
-      }
+      contentsArea?.removeChild(debugElement);
     };
-  }, [contentsRect]);
+  }, [detectionRect]);
 
-  return { extractedText, isExtracting, extractText, reExtractText };
+  return { extractedText, isExtracting, extractText };
 };
 
 export default useExtractText;

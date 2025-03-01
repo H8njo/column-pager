@@ -1,7 +1,8 @@
-import React, { PropsWithChildren, ReactNode, useRef, forwardRef, useImperativeHandle } from "react";
+import React, { PropsWithChildren, ReactNode } from "react";
 import useExtractText from "../hooks/useExtractText";
 import styled from "@emotion/styled";
 import Divider from "./Divider";
+import useElementRect from "../hooks/useElementRect";
 
 type ColumnPagerProps = {
   columnGap?: number;
@@ -13,38 +14,37 @@ type ColumnPagerProps = {
   debugMode?: boolean;
 };
 
-export type ColumnPagerHandle = {
-  reExtractText: () => void;
+const ColumnPager = ({
+  header,
+  footer,
+  columnGap = 0,
+  pageStyle,
+  dividerStyle,
+  columnCount = 2,
+  debugMode = false,
+  children,
+}: PropsWithChildren<ColumnPagerProps>) => {
+  const [contentsAreaRef, contentsRect] = useElementRect<HTMLDivElement>();
+  const { extractedText } = useExtractText({
+    detectionRect: contentsRect,
+    tolerance: { x: columnGap },
+    debugMode,
+  });
+  console.log(extractedText);
+
+  return (
+    <Page style={pageStyle}>
+      {header}
+      <Contents ref={contentsAreaRef} id="column-pager-contents-area">
+        <Divider columnCount={columnCount} style={dividerStyle} />
+        <ColumnGenerator columnGap={columnGap} columnCount={columnCount} debugMode={debugMode}>
+          {children}
+        </ColumnGenerator>
+      </Contents>
+      {footer}
+    </Page>
+  );
 };
-
-const ColumnPager = forwardRef<ColumnPagerHandle, PropsWithChildren<ColumnPagerProps>>(
-  ({ header, footer, columnGap = 0, pageStyle, dividerStyle, columnCount = 2, debugMode = false, children }, ref) => {
-    const contentsAreaRef = useRef<HTMLDivElement>(null);
-    const { extractedText, reExtractText } = useExtractText({
-      contentsAreaRef,
-      columnGapOffset: columnGap,
-      debugMode,
-    });
-
-    console.log(extractedText);
-    useImperativeHandle(ref, () => ({
-      reExtractText,
-    }));
-
-    return (
-      <Page style={pageStyle}>
-        {header}
-        <Contents ref={contentsAreaRef}>
-          <Divider columnCount={columnCount} style={dividerStyle} />
-          <ColumnGenerator columnGap={columnGap} columnCount={columnCount} debugMode={debugMode}>
-            {children}
-          </ColumnGenerator>
-        </Contents>
-        {footer}
-      </Page>
-    );
-  },
-);
 
 const Contents = styled.div({
   flexGrow: 1,
