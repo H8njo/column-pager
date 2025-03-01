@@ -10,8 +10,17 @@ type TestProps = {
   dividerStyle?: React.CSSProperties;
   header?: ReactNode;
   footer?: ReactNode;
+  columnCount?: number;
 };
-const Test = ({ header, footer, columnGap = 0, pageStyle, dividerStyle, children }: PropsWithChildren<TestProps>) => {
+const Test = ({
+  header,
+  footer,
+  columnGap = 0,
+  pageStyle,
+  dividerStyle,
+  columnCount = 2,
+  children,
+}: PropsWithChildren<TestProps>) => {
   const [area, setArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const { overflowCheckRef } = useOverflowDetector();
   const { extractedText } = useExtractText(area, columnGap);
@@ -26,8 +35,25 @@ const Test = ({ header, footer, columnGap = 0, pageStyle, dividerStyle, children
     <Page style={pageStyle}>
       {header}
       <Contents>
-        <ColumnDvider style={dividerStyle} />
-        <ColumnGenerator columnGap={columnGap} id="column-pager">
+        {Array(columnCount - 1)
+          .fill(null)
+          .map((_, idx) => {
+            const dividerPosition = (100 / columnCount) * (idx + 1); // 균등 배치 위치 계산
+
+            return (
+              <ColumnDvider
+                key={idx}
+                style={{
+                  ...dividerStyle,
+                  left: `${dividerPosition}%`, // X축 기준 위치 설정
+                  top: "50%", // Y축 기준 중앙 정렬
+                  transform: "translate(-50%, -50%)", // 정확한 중앙 정렬
+                }}
+              />
+            );
+          })}
+
+        <ColumnGenerator columnGap={columnGap} columnCount={columnCount} id="column-pager">
           <OverflowDetector ref={overflowCheckRef} />
           {children}
         </ColumnGenerator>
@@ -60,11 +86,11 @@ const ColumnDvider = styled("div")({
   position: "absolute",
   transform: "translate(-50%, -50%)",
 });
-const ColumnGenerator = styled("div")<{ columnGap: number }>(({ columnGap }) => ({
+const ColumnGenerator = styled("div")<{ columnGap: number; columnCount: number }>(({ columnGap, columnCount }) => ({
   width: "100%",
   height: "100%",
-  columnCount: 2,
-  columnGap: columnGap,
+  columnCount,
+  columnGap,
   columnFill: "auto",
   position: "relative",
   overflow: "hidden",

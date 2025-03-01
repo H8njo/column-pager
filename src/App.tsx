@@ -8,7 +8,13 @@ function App() {
 
   return (
     <div style={{ padding: 40 }}>
-      <Test columnGap={60} pageStyle={{ backgroundColor: "white" }} header={<Header />} footer={<Footer />}>
+      <Test
+        columnGap={60}
+        pageStyle={{ backgroundColor: "white" }}
+        header={<Header />}
+        footer={<Footer />}
+        columnCount={3}
+      >
         <div style={{ fontFamily: "Nanum Myeongjo, serif", fontSize: "0.825rem" }}>
           {data.map(({ items, startNumber, endNumber }, idx) => {
             return (
