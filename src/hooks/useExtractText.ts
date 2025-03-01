@@ -9,9 +9,9 @@ type ExtractTextProps = {
 /**
  * DOMRect 값을 받아 해당 위치의 text를 추출하는 hook
  * @param detectionRect 감지할 좌표값
- * @param tolerance 감지 오차범위
- * @param debugMode
- * @returns
+ * @param tolerance 감지 오차범위 (x, y)
+ * @param debugMode true일 경우 감지 영역에 디버깅용 border 생성
+ * @returns 추출된 텍스트와 추출 중 여부
  */
 const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }: ExtractTextProps) => {
   const [extractedText, setExtractedText] = useState<string>("");
@@ -20,24 +20,10 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
   const toleranceX = tolerance.x || 0;
   const toleranceY = tolerance.y || 0;
 
-  // 실제 텍스트 감지에 사용될 영역 계산
-  const getDetectionCoordinates = () => {
-    if (!detectionRect) return { x: 0, y: 0, width: 0, height: 0 };
-
-    const baseRect = detectionRect;
-
-    return {
-      x: baseRect.x + baseRect.width + toleranceX,
-      y: baseRect.y + toleranceY,
-      width: baseRect.width,
-      height: baseRect.height,
-    };
-  };
-
-  const getTextFromCoordinates = (detectionCoords: { x: number; y: number; width: number; height: number }): string => {
+  const getTextFromCoordinates = (): string => {
     if (!detectionRect) return "";
 
-    const { x, y, width, height } = detectionCoords;
+    const { x, y, width, height } = detectionRect;
     const textContent: string[] = [];
 
     const extractVisibleText = (
@@ -68,7 +54,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       return visibleText.trim() || null;
     };
 
-    function checkTextNodes(node: Node) {
+    const checkTextNodes = (node: Node) => {
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
         try {
           const range = document.createRange();
@@ -96,7 +82,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
           node.childNodes.forEach(checkTextNodes);
         }
       }
-    }
+    };
 
     if (document.body) {
       checkTextNodes(document.body);
@@ -105,17 +91,17 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
     return [...new Set(textContent)].join(" ");
   };
 
-  const extractText = () => {
+  useEffect(() => {
     if (!detectionRect) {
       setExtractedText("");
       return;
     }
 
-    setIsExtracting(true);
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       try {
-        const detectionCoords = getDetectionCoordinates();
-        const text = getTextFromCoordinates(detectionCoords);
+        setIsExtracting(true);
+
+        const text = getTextFromCoordinates();
         setExtractedText(text);
       } catch (error) {
         console.error("텍스트 추출 중 오류:", error);
@@ -123,17 +109,10 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       } finally {
         setIsExtracting(false);
       }
-    }, 0);
-  };
-
-  useEffect(() => {
-    if (!detectionRect) return;
-
-    extractText();
+    });
 
     if (!debugMode) return;
     const debugElement = document.createElement("div");
-    const detectionCoords = getDetectionCoordinates();
 
     Object.assign(debugElement.style, {
       position: "absolute",
@@ -146,14 +125,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       zIndex: "9999",
     });
 
-    console.log("Contents 컴포넌트 위치:", {
-      left: `${detectionRect.width}px`,
-      top: "0",
-      width: `${detectionRect.width}px`,
-      height: `${detectionRect.height}px`,
-    });
-
-    console.log("텍스트 감지 영역:", detectionCoords);
+    console.log("텍스트 감지 영역:", detectionRect);
 
     const contentsArea = document.getElementById("column-pager-contents-area");
     contentsArea?.appendChild(debugElement);
@@ -163,7 +135,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
     };
   }, [detectionRect]);
 
-  return { extractedText, isExtracting, extractText };
+  return { extractedText, isExtracting };
 };
 
 export default useExtractText;

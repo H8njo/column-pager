@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, ReactNode } from "react";
+import React, { PropsWithChildren, ReactNode, useEffect, useMemo } from "react";
 import useExtractText from "../hooks/useExtractText";
 import styled from "@emotion/styled";
 import Divider from "./Divider";
@@ -25,9 +25,23 @@ const ColumnPager = ({
   children,
 }: PropsWithChildren<ColumnPagerProps>) => {
   const [contentsAreaRef, contentsRect] = useElementRect<HTMLDivElement>();
+
+  const tolerance = { x: columnGap };
+  const detectionRect = useMemo(() => {
+    if (!contentsRect) return;
+    // 텍스트를 감지할 영역을 계산
+    return {
+      ...contentsRect,
+      x: contentsRect.x + contentsRect.width + tolerance.x,
+      y: contentsRect.y,
+      width: contentsRect.width,
+      height: contentsRect.height,
+    };
+  }, [contentsRect, columnGap]);
+
   const { extractedText } = useExtractText({
-    detectionRect: contentsRect,
-    tolerance: { x: columnGap },
+    detectionRect,
+    tolerance,
     debugMode,
   });
   console.log(extractedText);
