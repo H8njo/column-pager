@@ -96,6 +96,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
 
     try {
       setIsExtracting(true);
+      drawDebugBorder(rect);
       const text = getTextFromCoordinates(rect);
       setExtractedText(text);
       return text;
@@ -109,29 +110,23 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
 
   const drawDebugBorder = (rect: DOMRect) => {
     if (!debugMode) return;
-    const debugElement = document.createElement("div");
 
-    Object.assign(debugElement.style, {
+    const div = document.createElement("div");
+    Object.assign(div.style, {
       position: "absolute",
-      left: `${toleranceX + rect.width}px`,
-      top: `${0 + toleranceY}px`,
+      top: `${rect.top}px`,
+      left: `${rect.left}px`,
       width: `${rect.width}px`,
       height: `${rect.height}px`,
       border: "2px dashed red",
-      pointerEvents: "none",
-      zIndex: "9999",
+      background: "rgba(255, 0, 0, 0.1)",
     });
-
-    console.log("텍스트 감지 영역:", rect);
-
-    const contentsArea = document.getElementById("column-pager-contents-area");
-    contentsArea?.appendChild(debugElement);
+    document.body.appendChild(div);
   };
 
   useEffect(() => {
     if (!detectionRect) return;
     extractText(detectionRect);
-    drawDebugBorder(detectionRect);
   }, [detectionRect]);
 
   return { extractedText, isExtracting, extractText };
