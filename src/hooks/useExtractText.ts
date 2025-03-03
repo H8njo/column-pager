@@ -98,7 +98,6 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       setIsExtracting(true);
       const text = getTextFromCoordinates(rect);
       setExtractedText(text);
-
       return text;
     } catch (error) {
       console.error("텍스트 추출 중 오류:", error);
@@ -106,7 +105,8 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
     } finally {
       setIsExtracting(false);
     }
-
+  };
+  const drawDebugBorder = (rect: DOMRect) => {
     if (!debugMode) return;
     const debugElement = document.createElement("div");
 
@@ -130,6 +130,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
   useEffect(() => {
     if (!detectionRect) return;
     extractText(detectionRect);
+    drawDebugBorder(detectionRect);
   }, [detectionRect]);
 
   return { extractedText, isExtracting, extractText };

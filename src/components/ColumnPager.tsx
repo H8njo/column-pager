@@ -44,6 +44,7 @@ const ColumnPager = ({
     tolerance,
     debugMode,
   });
+  console.log(extractedText);
 
   const handleClick = () => {
     const text = extractText(detectionRect);
