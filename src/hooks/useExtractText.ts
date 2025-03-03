@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 type ExtractTextProps = {
   detectionRect: DOMRect | undefined;
@@ -20,10 +20,10 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
   const toleranceX = tolerance.x || 0;
   const toleranceY = tolerance.y || 0;
 
-  const getTextFromCoordinates = (): string => {
-    if (!detectionRect) return "";
+  const getTextFromCoordinates = (rect: DOMRect): string => {
+    if (!rect) return "";
 
-    const { x, y, width, height } = detectionRect;
+    const { x, y, width, height } = rect;
     const textContent: string[] = [];
 
     const extractVisibleText = (
@@ -91,51 +91,48 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
     return [...new Set(textContent)].join(" ");
   };
 
-  useEffect(() => {
-    if (!detectionRect) {
-      setExtractedText("");
-      return;
+  const extractText = (rect?: DOMRect) => {
+    if (!rect) return;
+
+    try {
+      setIsExtracting(true);
+      const text = getTextFromCoordinates(rect);
+      setExtractedText(text);
+
+      return text;
+    } catch (error) {
+      console.error("텍스트 추출 중 오류:", error);
+      setExtractedText(`오류가 발생했습니다: ${(error as Error).message}`);
+    } finally {
+      setIsExtracting(false);
     }
-
-    requestAnimationFrame(() => {
-      try {
-        setIsExtracting(true);
-
-        const text = getTextFromCoordinates();
-        setExtractedText(text);
-      } catch (error) {
-        console.error("텍스트 추출 중 오류:", error);
-        setExtractedText(`오류가 발생했습니다: ${(error as Error).message}`);
-      } finally {
-        setIsExtracting(false);
-      }
-    });
 
     if (!debugMode) return;
     const debugElement = document.createElement("div");
 
     Object.assign(debugElement.style, {
       position: "absolute",
-      left: `${toleranceX + detectionRect.width}px`,
+      left: `${toleranceX + rect.width}px`,
       top: `${0 + toleranceY}px`,
-      width: `${detectionRect.width}px`,
-      height: `${detectionRect.height}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
       border: "2px dashed red",
       pointerEvents: "none",
       zIndex: "9999",
     });
 
-    console.log("텍스트 감지 영역:", detectionRect);
+    console.log("텍스트 감지 영역:", rect);
 
     const contentsArea = document.getElementById("column-pager-contents-area");
     contentsArea?.appendChild(debugElement);
+  };
 
-    return () => {
-      contentsArea?.removeChild(debugElement);
-    };
+  useEffect(() => {
+    if (!detectionRect) return;
+    extractText(detectionRect);
   }, [detectionRect]);
 
-  return { extractedText, isExtracting };
+  return { extractedText, isExtracting, extractText };
 };
 
 export default useExtractText;

@@ -39,16 +39,19 @@ const ColumnPager = ({
     };
   }, [contentsRect, columnGap]);
 
-  const { extractedText } = useExtractText({
+  const { extractText, extractedText } = useExtractText({
     detectionRect,
     tolerance,
     debugMode,
   });
-  console.log(extractedText);
+
+  const handleClick = () => {
+    const text = extractText(detectionRect);
+  };
 
   return (
     <Page style={pageStyle}>
-      {header}
+      {header} <button onClick={handleClick}>test</button>
       <Contents ref={contentsAreaRef} id="column-pager-contents-area">
         <Divider columnCount={columnCount} style={dividerStyle} />
         <ColumnGenerator columnGap={columnGap} columnCount={columnCount} debugMode={debugMode}>
@@ -62,6 +65,7 @@ const ColumnPager = ({
 
 const Contents = styled.div({
   flexGrow: 1,
+  overflow: "auto",
   height: 0,
   position: "relative",
 });
