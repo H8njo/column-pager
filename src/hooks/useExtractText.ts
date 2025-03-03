@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 type ExtractTextProps = {
-  detectionRect: DOMRect | undefined;
+  detectionRect?: DOMRect;
   tolerance?: { x?: number; y?: number };
   debugMode?: boolean;
 };
@@ -88,7 +88,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       checkTextNodes(document.body);
     }
 
-    return [...new Set(textContent)].join(" ");
+    return [...textContent].join("");
   };
 
   const extractText = (rect?: DOMRect) => {
@@ -106,6 +106,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       setIsExtracting(false);
     }
   };
+
   const drawDebugBorder = (rect: DOMRect) => {
     if (!debugMode) return;
     const debugElement = document.createElement("div");
