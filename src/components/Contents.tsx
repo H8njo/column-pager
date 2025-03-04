@@ -1,9 +1,10 @@
-import React, { PropsWithChildren, useEffect } from "react";
+import React, { PropsWithChildren, useEffect, useState } from "react";
 import useExtractText from "../hooks/useExtractText";
 import styled from "@emotion/styled";
 import Divider from "./Divider";
 import useElementRect from "../hooks/useElementRect";
 import _ from "lodash";
+import { searchComponentForText } from "../utils/textSearcher";
 
 type ContentsProps = PropsWithChildren<{
   columnGap: number;
@@ -14,11 +15,16 @@ type ContentsProps = PropsWithChildren<{
 
 const Contents = ({ columnGap, columnCount, dividerStyle, debugMode, children }: ContentsProps) => {
   const [contentsAreaRef, contentsRect] = useElementRect<HTMLDivElement>();
+  const [pagesText, setPagesText] = useState<string[]>([]);
 
-  const tolerance = { x: columnGap };
+  useEffect(() => {
+    if (_.isEmpty(pagesText)) return;
+
+    const test = pagesText.map((pageText) => searchComponentForText(children, pageText)[0]);
+    console.log(test);
+  }, [pagesText]);
 
   const { extractText } = useExtractText({
-    tolerance,
     debugMode,
   });
 
@@ -36,7 +42,7 @@ const Contents = ({ columnGap, columnCount, dividerStyle, debugMode, children }:
       pages.push(text);
       pageIndex++;
     }
-    console.log(pages);
+    setPagesText(pages);
   }, [contentsRect]);
 
   return (
