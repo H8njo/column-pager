@@ -1,58 +1,23 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type ExtractTextProps = {
-  detectionRect?: DOMRect;
-  tolerance?: { x?: number; y?: number };
   debugMode?: boolean;
 };
 
 /**
  * DOMRect 값을 받아 해당 위치의 text를 추출하는 hook
- * @param detectionRect 감지할 좌표값
- * @param tolerance 감지 오차범위 (x, y)
  * @param debugMode true일 경우 감지 영역에 디버깅용 border 생성
  * @returns 추출된 텍스트와 추출 중 여부
  */
-const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }: ExtractTextProps) => {
+const useExtractText = ({ debugMode }: ExtractTextProps) => {
   const [extractedText, setExtractedText] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState<boolean>(false);
-
-  const toleranceX = tolerance.x || 0;
-  const toleranceY = tolerance.y || 0;
 
   const getTextFromCoordinates = (rect: DOMRect): string => {
     if (!rect) return "";
 
     const { x, y, width, height } = rect;
     const textContent: string[] = [];
-
-    const extractVisibleText = (
-      node: Node,
-      range: Range,
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ): string | null => {
-      if (!node.textContent) return null;
-
-      let visibleText = "";
-      const text = node.textContent.trim();
-
-      for (let i = 0; i < text.length; i++) {
-        range.setStart(node, i);
-        range.setEnd(node, i + 1);
-        const rects = range.getClientRects();
-
-        for (const rect of rects) {
-          if (!(rect.right < x || rect.left > x + width || rect.bottom < y || rect.top > y + height)) {
-            visibleText += text[i];
-          }
-        }
-      }
-
-      return visibleText.trim() || null;
-    };
 
     const checkTextNodes = (node: Node) => {
       if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
@@ -65,7 +30,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
             const rect = rects[i];
 
             if (!(rect.right < x || rect.left > x + width || rect.bottom < y || rect.top > y + height)) {
-              const partialText = extractVisibleText(node, range, x, y, width, height);
+              const partialText = node.textContent.trim();
               if (partialText) {
                 textContent.push(partialText);
               }
@@ -91,8 +56,8 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
     return [...textContent].join("");
   };
 
-  const extractText = (rect?: DOMRect) => {
-    if (!rect) return;
+  const extractText = (rect?: DOMRect): string => {
+    if (!rect) return "rect 값이 없습니다.";
 
     try {
       setIsExtracting(true);
@@ -102,7 +67,7 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
       return text;
     } catch (error) {
       console.error("텍스트 추출 중 오류:", error);
-      setExtractedText(`오류가 발생했습니다: ${(error as Error).message}`);
+      return `오류가 발생했습니다: ${(error as Error).message}`;
     } finally {
       setIsExtracting(false);
     }
@@ -123,11 +88,6 @@ const useExtractText = ({ detectionRect, tolerance = { x: 0, y: 0 }, debugMode }
     });
     document.body.appendChild(div);
   };
-
-  useEffect(() => {
-    if (!detectionRect) return;
-    extractText(detectionRect);
-  }, [detectionRect]);
 
   return { extractedText, isExtracting, extractText };
 };
