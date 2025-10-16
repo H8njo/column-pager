@@ -1,0 +1,4 @@
+/* CSS Reset - 가장 먼저 적용 */
+@import "./reset.css";
+
+@import "tailwindcss";

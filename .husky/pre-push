@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo "🔍 Running pre-push checks..."
+echo ""
+
+# Lint check
+echo "📝 Checking code quality..."
+pnpm lint
+
+# Build check
+echo "🏗️  Building project..."
+pnpm build
+
+echo ""
+echo "✅ Pre-push checks passed!"
+

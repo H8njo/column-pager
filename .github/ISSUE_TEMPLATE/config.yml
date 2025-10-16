@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/yourusername/vite-template/discussions
+    about: 질문이나 일반적인 토론은 Discussions에서 해주세요
+  - name: 📚 Documentation
+    url: https://github.com/yourusername/vite-template#readme
+    about: 문서를 먼저 확인해주세요
+
