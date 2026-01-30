@@ -1,80 +1,151 @@
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { ColumnPager } from './components';
+import Footer from './components/@common/Footer';
+import Header from './components/@common/Header';
 
 function App() {
-  const [activeCard, setActiveCard] = useState<number | null>(null);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-            Hello World
-          </h1>
-          <p className="text-lg text-gray-600">Welcome to Vite + React + Biome + Tailwind!</p>
-        </div>
+      <ColumnPager
+        columnCount={2}
+        pageDirection="vertical"
+        loading={false}
+        hidden={false}
+        columnClassName={''}
+        showDividers={false}
+        onPagesGenerated={(pages, htmlString) => {
+          console.log('pagesGenerated', pages, htmlString);
+        }}
+        header={() => <Header name="Test" />}
+        footer={({ pageNumber, pageInformation }) => (
+          <Footer pageNumber={pageNumber} contentsName={pageInformation ?? ''} />
+        )}
+      >
+        <h1 className="text-2xl font-bold mb-4">Column Pager 소개</h1>
+        <p className="mb-3">
+          Column Pager는 React 기반의 자동 페이지 분할 컴포넌트입니다. 긴 콘텐츠를 여러 페이지와
+          컬럼으로 자동 분할하여 인쇄나 PDF 생성에 최적화된 레이아웃을 제공합니다.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-          <button
-            type="button"
-            onClick={() => setActiveCard(activeCard === 0 ? null : 0)}
-            className={cn(
-              'p-6 rounded-xl border-2 transition-all cursor-pointer text-left',
-              activeCard === 0
-                ? 'bg-blue-100 border-blue-500 scale-105 shadow-lg'
-                : 'bg-blue-50 border-blue-200 hover:border-blue-400',
-            )}
-          >
-            <div className="text-3xl mb-2">⚡️</div>
-            <h3 className="font-semibold text-blue-900">Vite</h3>
-            <p className="text-sm text-blue-700">Lightning fast</p>
-          </button>
+        <h2 className="text-xl font-semibold mt-6 mb-3">주요 기능</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-4">
+          <li>자동 페이지 분할: 콘텐츠 높이에 따라 자동으로 페이지를 나눕니다.</li>
+          <li>다중 컬럼 지원: 1개 이상의 컬럼 레이아웃을 지원합니다.</li>
+          <li>헤더/푸터: 각 페이지에 커스텀 헤더와 푸터를 추가할 수 있습니다.</li>
+          <li>HTML 출력: 생성된 페이지를 HTML 문자열로 추출할 수 있습니다.</li>
+        </ul>
 
-          <button
-            type="button"
-            onClick={() => setActiveCard(activeCard === 1 ? null : 1)}
-            className={cn(
-              'p-6 rounded-xl border-2 transition-all cursor-pointer text-left',
-              activeCard === 1
-                ? 'bg-purple-100 border-purple-500 scale-105 shadow-lg'
-                : 'bg-purple-50 border-purple-200 hover:border-purple-400',
-            )}
-          >
-            <div className="text-3xl mb-2">⚛️</div>
-            <h3 className="font-semibold text-purple-900">React 19</h3>
-            <p className="text-sm text-purple-700">Latest features</p>
-          </button>
+        <h2 className="text-xl font-semibold mt-6 mb-3">사용 예시</h2>
+        <p className="mb-3">
+          ColumnPager는 보고서, 문서, 인보이스 등 인쇄가 필요한 다양한 콘텐츠에 활용할 수 있습니다.
+          각 페이지는 A4 크기에 맞게 최적화되어 있으며, 페이지 번호와 섹션 정보를 헤더/푸터에 표시할
+          수 있습니다.
+        </p>
 
-          <button
-            type="button"
-            onClick={() => setActiveCard(activeCard === 2 ? null : 2)}
-            className={cn(
-              'p-6 rounded-xl border-2 transition-all cursor-pointer text-left',
-              activeCard === 2
-                ? 'bg-indigo-100 border-indigo-500 scale-105 shadow-lg'
-                : 'bg-indigo-50 border-indigo-200 hover:border-indigo-400',
-            )}
-          >
-            <div className="text-3xl mb-2">🎨</div>
-            <h3 className="font-semibold text-indigo-900">Tailwind</h3>
-            <p className="text-sm text-indigo-700">Beautiful UI</p>
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold mb-4">Column Pager 소개</h1>
+        <p className="mb-3">
+          Column Pager는 React 기반의 자동 페이지 분할 컴포넌트입니다. 긴 콘텐츠를 여러 페이지와
+          컬럼으로 자동 분할하여 인쇄나 PDF 생성에 최적화된 레이아웃을 제공합니다.
+        </p>
 
-        <div className="flex gap-3 justify-center mt-8">
-          <button
-            type="button"
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
-          >
-            Get Started
-          </button>
-          <button
-            type="button"
-            className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg shadow-md hover:shadow-lg border-2 border-gray-200 hover:border-gray-300 transition-all duration-200"
-          >
-            Learn More
-          </button>
-        </div>
-      </div>
+        <h2 className="text-xl font-semibold mt-6 mb-3">주요 기능</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-4">
+          <li>자동 페이지 분할: 콘텐츠 높이에 따라 자동으로 페이지를 나눕니다.</li>
+          <li>다중 컬럼 지원: 1개 이상의 컬럼 레이아웃을 지원합니다.</li>
+          <li>헤더/푸터: 각 페이지에 커스텀 헤더와 푸터를 추가할 수 있습니다.</li>
+          <li>HTML 출력: 생성된 페이지를 HTML 문자열로 추출할 수 있습니다.</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">사용 예시</h2>
+        <p className="mb-3">
+          ColumnPager는 보고서, 문서, 인보이스 등 인쇄가 필요한 다양한 콘텐츠에 활용할 수 있습니다.
+          각 페이지는 A4 크기에 맞게 최적화되어 있으며, 페이지 번호와 섹션 정보를 헤더/푸터에 표시할
+          수 있습니다.
+        </p>
+
+        <h1 className="text-2xl font-bold mb-4">Column Pager 소개</h1>
+        <p className="mb-3">
+          Column Pager는 React 기반의 자동 페이지 분할 컴포넌트입니다. 긴 콘텐츠를 여러 페이지와
+          컬럼으로 자동 분할하여 인쇄나 PDF 생성에 최적화된 레이아웃을 제공합니다.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">주요 기능</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-4">
+          <li>자동 페이지 분할: 콘텐츠 높이에 따라 자동으로 페이지를 나눕니다.</li>
+          <li>다중 컬럼 지원: 1개 이상의 컬럼 레이아웃을 지원합니다.</li>
+          <li>헤더/푸터: 각 페이지에 커스텀 헤더와 푸터를 추가할 수 있습니다.</li>
+          <li>HTML 출력: 생성된 페이지를 HTML 문자열로 추출할 수 있습니다.</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">사용 예시</h2>
+        <p className="mb-3">
+          ColumnPager는 보고서, 문서, 인보이스 등 인쇄가 필요한 다양한 콘텐츠에 활용할 수 있습니다.
+          각 페이지는 A4 크기에 맞게 최적화되어 있으며, 페이지 번호와 섹션 정보를 헤더/푸터에 표시할
+          수 있습니다.
+        </p>
+
+        <h1 className="text-2xl font-bold mb-4">Column Pager 소개</h1>
+        <p className="mb-3">
+          Column Pager는 React 기반의 자동 페이지 분할 컴포넌트입니다. 긴 콘텐츠를 여러 페이지와
+          컬럼으로 자동 분할하여 인쇄나 PDF 생성에 최적화된 레이아웃을 제공합니다.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">주요 기능</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-4">
+          <li>자동 페이지 분할: 콘텐츠 높이에 따라 자동으로 페이지를 나눕니다.</li>
+          <li>다중 컬럼 지원: 1개 이상의 컬럼 레이아웃을 지원합니다.</li>
+          <li>헤더/푸터: 각 페이지에 커스텀 헤더와 푸터를 추가할 수 있습니다.</li>
+          <li>HTML 출력: 생성된 페이지를 HTML 문자열로 추출할 수 있습니다.</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">사용 예시</h2>
+        <p className="mb-3">
+          ColumnPager는 보고서, 문서, 인보이스 등 인쇄가 필요한 다양한 콘텐츠에 활용할 수 있습니다.
+          각 페이지는 A4 크기에 맞게 최적화되어 있으며, 페이지 번호와 섹션 정보를 헤더/푸터에 표시할
+          수 있습니다.
+        </p>
+
+        <h1 className="text-2xl font-bold mb-4">Column Pager 소개</h1>
+        <p className="mb-3">
+          Column Pager는 React 기반의 자동 페이지 분할 컴포넌트입니다. 긴 콘텐츠를 여러 페이지와
+          컬럼으로 자동 분할하여 인쇄나 PDF 생성에 최적화된 레이아웃을 제공합니다.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">주요 기능</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-4">
+          <li>자동 페이지 분할: 콘텐츠 높이에 따라 자동으로 페이지를 나눕니다.</li>
+          <li>다중 컬럼 지원: 1개 이상의 컬럼 레이아웃을 지원합니다.</li>
+          <li>헤더/푸터: 각 페이지에 커스텀 헤더와 푸터를 추가할 수 있습니다.</li>
+          <li>HTML 출력: 생성된 페이지를 HTML 문자열로 추출할 수 있습니다.</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">사용 예시</h2>
+        <p className="mb-3">
+          ColumnPager는 보고서, 문서, 인보이스 등 인쇄가 필요한 다양한 콘텐츠에 활용할 수 있습니다.
+          각 페이지는 A4 크기에 맞게 최적화되어 있으며, 페이지 번호와 섹션 정보를 헤더/푸터에 표시할
+          수 있습니다.
+        </p>
+
+        <h1 className="text-2xl font-bold mb-4">Column Pager 소개</h1>
+        <p className="mb-3">
+          Column Pager는 React 기반의 자동 페이지 분할 컴포넌트입니다. 긴 콘텐츠를 여러 페이지와
+          컬럼으로 자동 분할하여 인쇄나 PDF 생성에 최적화된 레이아웃을 제공합니다.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">주요 기능</h2>
+        <ul className="list-disc pl-5 space-y-2 mb-4">
+          <li>자동 페이지 분할: 콘텐츠 높이에 따라 자동으로 페이지를 나눕니다.</li>
+          <li>다중 컬럼 지원: 1개 이상의 컬럼 레이아웃을 지원합니다.</li>
+          <li>헤더/푸터: 각 페이지에 커스텀 헤더와 푸터를 추가할 수 있습니다.</li>
+          <li>HTML 출력: 생성된 페이지를 HTML 문자열로 추출할 수 있습니다.</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-3">사용 예시</h2>
+        <p className="mb-3">
+          ColumnPager는 보고서, 문서, 인보이스 등 인쇄가 필요한 다양한 콘텐츠에 활용할 수 있습니다.
+          각 페이지는 A4 크기에 맞게 최적화되어 있으며, 페이지 번호와 섹션 정보를 헤더/푸터에 표시할
+          수 있습니다.
+        </p>
+      </ColumnPager>
     </div>
   );
 }
