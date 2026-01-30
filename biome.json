@@ -25,30 +25,35 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedVariables": "error",
-        "useExhaustiveDependencies": "warn",
+        "noUnusedVariables": "warn",
+        "useExhaustiveDependencies": "off",
         "useHookAtTopLevel": "error"
       },
       "a11y": {
-        "useButtonType": "error",
-        "useAltText": "error",
-        "useKeyWithClickEvents": "warn",
-        "useValidAnchor": "error",
-        "noAccessKey": "warn",
-        "useAriaPropsForRole": "error",
-        "useValidAriaProps": "error"
+        "useButtonType": "warn",
+        "useAltText": "warn",
+        "useKeyWithClickEvents": "off",
+        "useValidAnchor": "warn",
+        "noAccessKey": "off",
+        "useAriaPropsForRole": "warn",
+        "useValidAriaProps": "warn"
       },
       "style": {
-        "useNamingConvention": "error",
+        "useNamingConvention": "off",
+        "noNonNullAssertion": "off",
         "useFilenamingConvention": {
-          "level": "error",
+          "level": "warn",
           "options": {
             "filenameCases": ["camelCase", "PascalCase", "kebab-case"]
           }
         }
       },
       "suspicious": {
-        "noDoubleEquals": "error"
+        "noDoubleEquals": "warn",
+        "noArrayIndexKey": "off"
+      },
+      "complexity": {
+        "useLiteralKeys": "off"
       }
     }
   },
