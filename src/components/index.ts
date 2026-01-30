@@ -1,2 +1,1 @@
-export type { ButtonProps } from './Button';
-export { Button } from './Button';
+export { default as ColumnPager } from './ColumnPager';
