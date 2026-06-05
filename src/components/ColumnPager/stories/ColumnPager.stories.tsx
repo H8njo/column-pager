@@ -444,6 +444,73 @@ export const EditableContent: Story = {
 };
 
 /**
+ * 순서 섞기 → 재배치 속도 확인.
+ * 카드 배열 순서만 바꾼다(내용·크기는 동일). 배치(페이지네이션)는 다시 계산되지만
+ * per-item 측정 캐시가 콘텐츠 시그니처 기준이라 DOM 사이즈 측정은 전부 캐시 히트 →
+ * 재측정 없이 매우 빠르게 재반영된다. 좌상단에 [섞기]→emit까지 걸린 ms 표시.
+ */
+const ShuffleDemo = () => {
+  const [cards, setCards] = useState(() => CARDS); // 100장
+  const [elapsed, setElapsed] = useState<number | null>(null);
+  const [pageCount, setPageCount] = useState(0);
+  const startRef = useRef(0);
+
+  const shuffle = () => {
+    startRef.current = performance.now();
+    setCards((prev) => {
+      const next = [...prev];
+      // Fisher-Yates
+      for (let i = next.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+      }
+      return next;
+    });
+  };
+
+  return (
+    <>
+      <div className="fixed top-2 left-2 z-10 w-[320px] space-y-2 rounded bg-white p-3 shadow">
+        <div className="font-mono text-gray-600 text-xs">
+          재배치(emit): {elapsed === null ? '-' : `${elapsed}ms`} · 총 {pageCount} 페이지 · 카드{' '}
+          {cards.length}개
+        </div>
+        <div className="max-h-16 overflow-auto font-mono text-[10px] text-gray-400 leading-tight">
+          순서: {cards.map((c) => c.number).join(' ')}
+        </div>
+        <button
+          type="button"
+          className="rounded bg-blue-600 px-2 py-1 text-white text-xs"
+          onClick={shuffle}
+        >
+          섞기 (순서만 변경)
+        </button>
+      </div>
+
+      <ColumnPager
+        columnCount={2}
+        showDividers
+        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+        onPagesGenerated={(pages) => {
+          setPageCount(pages.length);
+          if (startRef.current)
+            setElapsed(Math.round((performance.now() - startRef.current) * 100) / 100);
+        }}
+      >
+        {renderCards(cards)}
+      </ColumnPager>
+    </>
+  );
+};
+
+export const ShuffleOrder: Story = {
+  name: '순서 섞기 → 재배치 속도',
+  parameters: { controls: { disable: true } },
+  render: () => <ShuffleDemo />,
+};
+
+/**
  * 넓이/높이 설정.
  * - 높이: `pageHeight` prop으로 직접 지정 (슬라이더).
  * - 넓이: prop이 아니라 컨테이너 폭에 반응 — 래퍼 폭을 슬라이더로 바꾸면
