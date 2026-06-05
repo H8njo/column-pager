@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Card from '../../ui/Card';
@@ -6,24 +7,23 @@ import ColumnPager from '../ColumnPager';
 import { getSectionPageRanges, type SectionPageRanges } from '../core/sectionRanges';
 import type { Page } from '../core/types';
 
-/**
- * ColumnPager - PDF 페이지네이션 컴포넌트 (재설계판)
- *
- * children을 컨테이너 폭(반응형) × pageHeight 페이지에 맞게 자동 분할한다.
- * - 작은 요소: 컬럼을 채우다 넘치면 다음 컬럼/페이지
- * - 큰 요소: CSS 멀티컬럼으로 잘라 이어 표현
- *
- * Compound: `ColumnPager.PageBreak / .ColumnBreak / .SectionMark / .StableGate`
- *
- * 콘텐츠 카드는 ui/Card (faker, 고정 시드)를 사용한다. 이 스토리는 측정/슬라이스
- * 렌더의 브라우저 통합 검증 용도이기도 하다(happy-dom에선 측정이 0).
- */
 type StoryArgs = {
   columnCount: number;
   pageDirection: 'horizontal' | 'vertical';
   showDividers: boolean;
 };
 
+/**
+ * ColumnPager — children을 컨테이너 폭(반응형) × `pageHeight` 페이지로 자동 분할하는 렌더러.
+ *
+ * - 작은 요소: 컬럼을 채우다 넘치면 다음 컬럼/페이지
+ * - 큰 요소: CSS 멀티컬럼으로 잘라 여러 컬럼·페이지에 이어 표현
+ * - 컴파운드 컨트롤: `ColumnPager.PageBreak / .ColumnBreak / .SectionMark / .StableGate`
+ * - `onPagesGenerated(pages, html)`로 결과(렌더된 outerHTML) 방출 — 문서/ PDF 변환은 소비자 몫
+ *
+ * 콘텐츠 카드는 ui/Card (faker, 고정 시드)를 사용한다. 측정·슬라이스 렌더는 실제 브라우저에서만
+ * 유효하다(happy-dom 단위테스트에선 측정값이 0).
+ */
 const meta: Meta<StoryArgs> = {
   title: 'PDF/ColumnPager',
   parameters: { layout: 'centered' },
@@ -141,6 +141,45 @@ export const TallItemSlicing: Story = {
 };
 
 /**
+ * moveOversizedItemToNextColumn — 컬럼 높이를 넘는 큰 아이템을, 이미 채워진 컬럼에선
+ * 자르기 전에 다음 컬럼으로 먼저 보낸 뒤 빈 컬럼 맨 위에서 슬라이스를 시작한다.
+ *
+ * - off(기본): 앞 카드로 일부 찬 컬럼의 남은 공간부터 큰 카드가 잘려 이어짐(carry).
+ * - on: 큰 카드가 통째로 다음 컬럼으로 이동 → 빈 컬럼 위에서부터 깔끔하게 슬라이스.
+ *
+ * 컨트롤의 `moveOversizedItemToNextColumn`을 켜고/끄며 첫 컬럼의 큰 카드 시작 위치를 비교.
+ */
+type OversizedArgs = {
+  moveOversizedItemToNextColumn: boolean;
+  showDividers: boolean;
+};
+
+export const MoveOversizedItem: StoryObj<OversizedArgs> = {
+  name: '큰 아이템 다음 컬럼으로 이동',
+  args: { moveOversizedItemToNextColumn: false, showDividers: true },
+  argTypes: {
+    moveOversizedItemToNextColumn: { control: 'boolean' },
+    showDividers: { control: 'boolean' },
+  },
+  render: (args) => (
+    <ColumnPager
+      columnCount={2}
+      showDividers={args.showDividers}
+      moveOversizedItemToNextColumn={args.moveOversizedItemToNextColumn}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {/* 첫 컬럼을 일부 채우는 일반 카드 */}
+      <Card {...CARDS[0]} />
+      <div className="h-4" />
+      {/* 컬럼 높이를 초과하는 큰 카드:
+          off → 위 카드 아래(남은 공간)부터 잘려 시작 / on → 다음 컬럼 맨 위에서 시작 */}
+      <Card {...TALL_CARD} />
+    </ColumnPager>
+  ),
+};
+
+/**
  * PageBreak 의 changeColumnCountTo 로 페이지마다 컬럼 수를 바꾼다.
  * 1컬럼 페이지 → 2컬럼 페이지 → 3컬럼 페이지.
  */
@@ -205,14 +244,18 @@ const SectionsDemo = () => {
 
 export const WithSections: Story = {
   name: 'SectionMark + 섹션 범위',
+  parameters: { controls: { disable: true } },
   render: () => <SectionsDemo />,
 };
+
+// 스토리 본문 텍스트도 faker로 생성(고정 시드). CARDS/TALL_CARD가 import 시점에 이미
+// 생성된 뒤이므로 여기서 재시드해도 카드 데이터엔 영향 없음.
+faker.seed(20240608);
 
 /** 비동기로 "불러온" 긴 콘텐츠 (로드 후 컬럼 높이를 초과 → 슬라이스되어 페이지 증가) */
 const ASYNC_PARAGRAPHS = Array.from(
   { length: 45 },
-  (_, i) =>
-    `비동기 항목 ${i + 1}. ${'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(2)}`,
+  (_, i) => `비동기 항목 ${i + 1}. ${faker.lorem.sentences(2)}`,
 );
 
 /**
@@ -265,6 +308,7 @@ const StableGateDemo = () => {
 
 export const AsyncStableGate: Story = {
   name: 'StableGate (비동기 콘텐츠)',
+  parameters: { controls: { disable: true } },
   render: () => <StableGateDemo />,
 };
 
@@ -314,13 +358,14 @@ const PdfPreviewDemo = () => {
 
 export const PdfPreview: Story = {
   name: '소비자 측 문서 변환 (iframe 미리보기)',
+  parameters: { controls: { disable: true } },
   render: () => <PdfPreviewDemo />,
 };
 
-/** 길게 만들기용 샘플 (여러 줄) */
+/** 길게 만들기용 샘플 (여러 줄, faker) */
 const LONG_TEXT = Array.from(
   { length: 30 },
-  (_, i) => `${i + 1}행. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+  (_, i) => `${i + 1}행. ${faker.lorem.sentence({ min: 8, max: 14 })}`,
 ).join('\n');
 
 /**
@@ -394,6 +439,7 @@ const EditableDemo = () => {
 
 export const EditableContent: Story = {
   name: '데이터 편집 → 즉시 반영',
+  parameters: { controls: { disable: true } },
   render: () => <EditableDemo />,
 };
 
