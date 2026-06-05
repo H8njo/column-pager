@@ -40,9 +40,11 @@ const usePagination = ({
   paused,
   onError,
 }: UsePaginationArgs): UsePaginationResult => {
+  // signature: 재페이지네이션 트리거(구조 변화 감지)
   const signature = useMemo(() => blocksSignature(children), [children]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: signature가 children 구조 변화를 대표 (의도적 dedup)
-  const blocks = useMemo(() => toBlocks(children), [signature]);
+  // blocks/contentBlocks: 렌더용 — 최신 children 노드를 반영해야 한다.
+  // (signature가 같아도 비구조적 prop 변경 — 예: StableGate의 stable — 이 화면에 반영되도록)
+  const blocks = useMemo(() => toBlocks(children), [children]);
   const contentBlocks = useMemo(() => contentBlocksOf(blocks), [blocks]);
 
   const [pages, setPages] = useState<Page[]>([]);

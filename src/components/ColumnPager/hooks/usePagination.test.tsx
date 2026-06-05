@@ -76,6 +76,21 @@ describe('usePagination', () => {
     await waitFor(() => expect(second.calls()).toBe(1)); // 새 measurer로 재측정
   });
 
+  it('signature 동일해도 contentBlocks는 최신 노드를 반영한다 (StableGate 등 prop 변경)', async () => {
+    const { measurer } = makeFake();
+    const a: ReactNode = createElement('div', { key: '0' }, 'x');
+    // 같은 type/key/내용 → signature 동일, 비구조적 prop만 다름
+    const b: ReactNode = createElement('div', { key: '0', 'data-stable': true }, 'x');
+    const { result, rerender } = renderHook(
+      (props: { children: ReactNode }) =>
+        usePagination({ children: props.children, columnCount: 1, measurer }),
+      { initialProps: { children: [a] } },
+    );
+    await waitFor(() => expect(result.current.contentBlocks[0]?.node).toBe(a));
+    rerender({ children: [b] });
+    expect(result.current.contentBlocks[0]?.node).toBe(b); // 최신 노드 반영
+  });
+
   it('paused면 계산하지 않는다', async () => {
     const { measurer, calls } = makeFake();
     const { result } = renderHook(() =>
