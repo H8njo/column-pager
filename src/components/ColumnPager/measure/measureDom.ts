@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import ItemCell from '../components/ItemCell';
 import { KEY, keySelector } from '../components/keys';
 import Page from '../components/Page';
+import { blocksSignature } from '../core/signature';
 import type { ContentBlock, ItemMeasure, Measurer, OverflowMeasure, Size } from '../core/types';
 import {
   createOffscreenContainer,
@@ -53,6 +54,11 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
 
   const columnBoxCache = new Map<string, Size>();
   const decoratorHeightCache = new Map<object, number>();
+  // 아이템 측정 캐시: key = `${columnWidth}|${콘텐츠 시그니처}`.
+  // 안 바뀐 카드는 재측정하지 않고 캐시 재사용 → 한 카드만 편집하면 그 카드만 측정.
+  const itemMeasureCache = new Map<string, ItemMeasure>();
+  const itemKey = (block: ContentBlock, columnWidth: number): string =>
+    `${columnWidth}|${blocksSignature(block.node)}`;
 
   /** 빈 Page를 렌더해 한 컬럼 박스 크기 측정 (캐시) */
   const measureColumnBox = async (pageIndex: number, columnCount: number): Promise<Size> => {
@@ -123,54 +129,81 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     },
 
     async measureItems(blocks, columnWidth) {
-      const results: ItemMeasure[] = [];
-      const groups = chunk(blocks, chunkSize);
-      const container = createOffscreenContainer({ width: columnWidth });
-      await waitForFonts();
+      const keys = blocks.map((b) => itemKey(b, columnWidth));
+      // 캐시에 없는(=바뀐/새) 블록만 측정 대상
+      const todo = blocks
+        .map((block, index) => ({ block, key: keys[index] }))
+        .filter((x) => !itemMeasureCache.has(x.key));
 
-      try {
-        for (let g = 0; g < groups.length; g++) {
-          await waitForIdle();
-          const group = groups[g];
-          const wrapper = document.createElement('div');
-          wrapper.style.cssText = 'display: contents;';
-          container.appendChild(wrapper);
-          const root = createRoot(wrapper);
+      if (todo.length > 0) {
+        const groups = chunk(todo, chunkSize);
+        const container = createOffscreenContainer({ width: columnWidth });
+        await waitForFonts();
 
-          renderElements(
-            root,
-            group.map((b) =>
-              createElement(ItemCell, { decoratorClassName: b.decoratorClassName }, b.node),
-            ),
-            `measure-${g}`,
-          );
-          await waitForNextFrame();
+        try {
+          for (let g = 0; g < groups.length; g++) {
+            // 대량(여러 청크)일 때만 메인 스레드에 양보 — 단일 청크(편집 1건)는 즉시 측정
+            if (groups.length > 1) await waitForIdle();
+            const group = groups[g];
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display: contents;';
+            container.appendChild(wrapper);
+            const root = createRoot(wrapper);
 
-          const cells = Array.from(wrapper.children);
-          cells.forEach((cell) => {
-            results.push({
-              container: rectSize(cell),
-              sliceWidth: rectSize(cell.querySelector(keySelector(KEY.CELL_INNER))).width,
+            renderElements(
+              root,
+              group.map(({ block }) =>
+                createElement(
+                  ItemCell,
+                  { decoratorClassName: block.decoratorClassName },
+                  block.node,
+                ),
+              ),
+              `measure-${g}`,
+            );
+            await waitForNextFrame();
+
+            const cells = Array.from(wrapper.children);
+            group.forEach(({ key }, idx) => {
+              const cell = cells[idx];
+              itemMeasureCache.set(key, {
+                container: rectSize(cell),
+                sliceWidth: rectSize(cell?.querySelector(keySelector(KEY.CELL_INNER)) ?? null)
+                  .width,
+              });
             });
-          });
 
-          root.unmount();
-          container.removeChild(wrapper);
-          if (g < groups.length - 1) await waitForNextFrame();
+            root.unmount();
+            container.removeChild(wrapper);
+            if (g < groups.length - 1) await waitForNextFrame();
+          }
+        } finally {
+          removeContainer(container);
         }
-      } finally {
-        removeContainer(container);
+
+        // decorator chrome 높이 (새로 측정한 블록만)
+        for (const { block, key } of todo) {
+          if (block.decoratorTemplate) {
+            const measure = itemMeasureCache.get(key);
+            if (measure) {
+              measure.decoratorHeight = await measureDecoratorHeight(
+                block.decoratorTemplate,
+                columnWidth,
+              );
+            }
+          }
+        }
       }
 
-      // decorator chrome 높이 (해당 블록만)
-      for (let i = 0; i < blocks.length; i++) {
-        const template = blocks[i].decoratorTemplate;
-        if (template) {
-          results[i].decoratorHeight = await measureDecoratorHeight(template, columnWidth);
-        }
+      // 메모리 bound: 현재 키 집합에 없는 캐시 항목 제거 (편집 시 옛 콘텐츠 키 정리)
+      const live = new Set(keys);
+      for (const cached of itemMeasureCache.keys()) {
+        if (!live.has(cached)) itemMeasureCache.delete(cached);
       }
 
-      return results;
+      return keys.map(
+        (key) => itemMeasureCache.get(key) ?? { container: { width: 0, height: 0 }, sliceWidth: 0 },
+      );
     },
 
     async measureOverflow(block, columnWidth, columnHeight, carryOffset) {
