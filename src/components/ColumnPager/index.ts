@@ -7,6 +7,8 @@
 
 export type { ColumnPagerProps, PageInfo } from './ColumnPager';
 export { default as ColumnPager } from './ColumnPager';
+// 페이지 크기 프리셋/타입
+export { type Orientation, PAGE_PRESETS, type PageSizeName } from './components/pageSize';
 // 컨트롤 props 타입 (컴파운드 API: ColumnPager.PageBreak 등)
 export type { PageBreakProps } from './controls/PageBreak';
 export type { SectionMarkProps } from './controls/SectionMark';

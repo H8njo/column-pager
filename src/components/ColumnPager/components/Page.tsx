@@ -13,9 +13,12 @@ type PageProps = {
   footer?: ReactNode;
   showDividers?: boolean;
   columnClassName?: string;
+  /** 페이지 폭/높이 (기본 A4) */
+  pageWidth?: number;
+  pageHeight?: number;
 };
 
-/** A4 한 장: Header / Body(Column×N) / Footer */
+/** 한 페이지: Header / Body(Column×N) / Footer */
 const Page = ({
   columns,
   columnCount,
@@ -23,8 +26,10 @@ const Page = ({
   footer,
   showDividers,
   columnClassName,
+  pageWidth,
+  pageHeight,
 }: PageProps) => (
-  <A4>
+  <A4 width={pageWidth} height={pageHeight}>
     <Header>{header}</Header>
     <Body columnCount={columnCount} showDividers={showDividers}>
       {Array.from({ length: columnCount }).map((_, colIndex) => (

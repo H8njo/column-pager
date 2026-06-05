@@ -20,6 +20,9 @@ export type MeasurerConfig = {
   showDividers?: boolean;
   columnClassName?: string;
   chunkSize?: number;
+  /** 페이지 폭/높이 (기본 A4) — 컬럼 측정 시 동일 크기로 렌더 */
+  pageWidth?: number;
+  pageHeight?: number;
 };
 
 const chunk = <T>(arr: readonly T[], size: number): T[][] => {
@@ -37,7 +40,15 @@ const rectSize = (el: Element | null): Size => {
 
 /** DOM 측정 어댑터 생성 */
 export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
-  const { renderHeader, renderFooter, showDividers, columnClassName, chunkSize = 30 } = config;
+  const {
+    renderHeader,
+    renderFooter,
+    showDividers,
+    columnClassName,
+    chunkSize = 30,
+    pageWidth,
+    pageHeight,
+  } = config;
 
   const columnBoxCache = new Map<string, Size>();
   const decoratorHeightCache = new Map<object, number>();
@@ -62,6 +73,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
             footer: renderFooter?.(pageIndex),
             showDividers,
             columnClassName,
+            pageWidth,
+            pageHeight,
           }),
         ],
         'layout',

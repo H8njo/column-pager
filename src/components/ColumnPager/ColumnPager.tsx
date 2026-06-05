@@ -4,6 +4,7 @@ import Container from './components/Container';
 import ItemCell from './components/ItemCell';
 import { STABLE_ATTR, stableSelector } from './components/keys';
 import Page from './components/Page';
+import { type Orientation, type PageSizeName, resolvePageSize } from './components/pageSize';
 import SliceView from './components/SliceView';
 import ColumnBreak from './controls/ColumnBreak';
 import PageBreak from './controls/PageBreak';
@@ -25,6 +26,13 @@ export type ColumnPagerProps = {
   columnCount?: number;
   /** 페이지 나열 방향 (기본 vertical) */
   pageDirection?: 'horizontal' | 'vertical';
+  /** 페이지 크기 프리셋 (기본 'A4') */
+  pageSize?: PageSizeName;
+  /** 페이지 방향 (기본 'portrait') */
+  orientation?: Orientation;
+  /** 페이지 폭/높이 직접 지정 (px) — 프리셋보다 우선 */
+  pageWidth?: number;
+  pageHeight?: number;
   /** 로딩 중이면 계산/렌더 보류 */
   loading?: boolean;
   /** 화면에서 숨김 (onPagesGenerated용으로 DOM은 유지) */
@@ -71,6 +79,10 @@ const ColumnPager = ({
   children,
   columnCount = 1,
   pageDirection = 'vertical',
+  pageSize = 'A4',
+  orientation = 'portrait',
+  pageWidth,
+  pageHeight,
   loading,
   hidden,
   columnClassName,
@@ -83,14 +95,21 @@ const ColumnPager = ({
   onStableTimeout,
   onError,
 }: ColumnPagerProps) => {
+  const pageDims = useMemo(
+    () => resolvePageSize(pageSize, orientation, pageWidth, pageHeight),
+    [pageSize, orientation, pageWidth, pageHeight],
+  );
+
   const measurerConfig: MeasurerConfig = useMemo(
     () => ({
       renderHeader: header ? (pageIndex) => header({ pageNumber: pageIndex + 1 }) : undefined,
       renderFooter: footer ? (pageIndex) => footer({ pageNumber: pageIndex + 1 }) : undefined,
       showDividers,
       columnClassName,
+      pageWidth: pageDims.width,
+      pageHeight: pageDims.height,
     }),
-    [header, footer, showDividers, columnClassName],
+    [header, footer, showDividers, columnClassName, pageDims],
   );
 
   // measurer는 config가 바뀔 때만 새로 생성 → 캐시가 run 간 유지되고,
@@ -145,6 +164,8 @@ const ColumnPager = ({
         footer={footer?.({ pageNumber: pageIndex + 1, section })}
         showDividers={showDividers}
         columnClassName={columnClassName}
+        pageWidth={pageDims.width}
+        pageHeight={pageDims.height}
       />
     );
   });
