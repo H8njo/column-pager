@@ -79,8 +79,8 @@ describe('usePagination', () => {
   it('signature 동일해도 contentBlocks는 최신 노드를 반영한다 (StableGate 등 prop 변경)', async () => {
     const { measurer } = makeFake();
     const a: ReactNode = createElement('div', { key: '0' }, 'x');
-    // 같은 type/key/내용 → signature 동일, 비구조적 prop만 다름
-    const b: ReactNode = createElement('div', { key: '0', 'data-stable': true }, 'x');
+    // 함수 prop만 다름 → signature 동일(함수는 시그니처에서 제외), 노드 식별자만 다름
+    const b: ReactNode = createElement('div', { key: '0', onClick: () => {} }, 'x');
     const { result, rerender } = renderHook(
       (props: { children: ReactNode }) =>
         usePagination({ children: props.children, columnCount: 1, measurer }),

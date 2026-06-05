@@ -1,12 +1,36 @@
 import { Children, isValidElement, type ReactNode } from 'react';
 
 /**
- * children의 구조 시그니처를 만든다 (재생성 dedup용).
+ * children의 구조 시그니처를 만든다 (재페이지네이션 dedup + per-item 측정 캐시 키).
  *
- * V1은 children '길이'로만 dedup해서, 길이가 같고 내용만 바뀌면 재페이지네이션이
- * 안 되는 잠재 버그가 있었다. 여기서는 key/type/주요 식별 정보를 포함한 구조
- * 시그니처를 만들어, 길이가 같아도 내용이 다르면 다른 시그니처가 나오게 한다.
+ * type/key + props(children 제외) + 자식 구조를 모두 반영한다. 그래서 콘텐츠를
+ * children이 아니라 prop으로 받는 컴포넌트(예: <Card lines={...} />)도 prop이
+ * 바뀌면 시그니처가 바뀐다.
+ *
+ * 함수 prop은 제외한다 — 렌더 크기에 무관하고, 렌더마다 새 클로저라 포함하면
+ * 불필요한 재계산을 유발한다.
  */
+const serializeProps = (props: Record<string, unknown>): string => {
+  const out: string[] = [];
+  for (const key of Object.keys(props).sort()) {
+    if (key === 'children' || key === 'key') continue;
+    const value = props[key];
+    if (typeof value === 'function' || value === undefined) continue;
+    if (value === null) {
+      out.push(`${key}=null`);
+    } else if (typeof value === 'object') {
+      try {
+        out.push(`${key}=${JSON.stringify(value)}`);
+      } catch {
+        out.push(`${key}=obj`);
+      }
+    } else {
+      out.push(`${key}=${String(value)}`);
+    }
+  }
+  return out.join(',');
+};
+
 export const blocksSignature = (children: ReactNode): string => {
   const parts: string[] = [];
 
@@ -24,13 +48,12 @@ export const blocksSignature = (children: ReactNode): string => {
         parts.push(`t:${String(child)}`);
         return;
       }
-      const props = child.props as { children?: ReactNode; section?: string };
-      parts.push(`e:${typeId(child.type)}:${child.key ?? '-'}`);
-      // section / changeColumnCountTo 같은 식별 prop 포함
-      if (props.section !== undefined) parts.push(`s:${props.section}`);
-      if (props.children !== undefined) {
+      const props = child.props as Record<string, unknown>;
+      parts.push(`e:${typeId(child.type)}:${child.key ?? '-'}{${serializeProps(props)}}`);
+      const childChildren = (props as { children?: ReactNode }).children;
+      if (childChildren !== undefined) {
         parts.push('(');
-        walk(props.children);
+        walk(childChildren);
         parts.push(')');
       }
     });
