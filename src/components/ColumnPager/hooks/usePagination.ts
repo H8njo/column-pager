@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { contentBlocksOf, toBlocks } from '../core/blocks';
-import { groupIntoPages, measureBlocks, placeBlocks } from '../core/paginate';
+import { groupIntoPages, paginate } from '../core/paginate';
 import { blocksSignature } from '../core/signature';
 import type { ContentBlock, Measurer, Page, PaginateOptions } from '../core/types';
 
@@ -59,8 +59,6 @@ const usePagination = ({
   optionsRef.current = options;
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
-  // 직전 페이지 수를 다음 계산의 첫 추정값으로 사용 → 수렴 루프가 보통 1패스에 끝남
-  const lastPageCountRef = useRef(0);
 
   useEffect(() => {
     if (paused) return;
@@ -83,27 +81,9 @@ const usePagination = ({
 
     (async () => {
       try {
-        // 측정은 1회 (카드 재측정 없음). 배치는 pageCount를 수렴시키며 반복.
-        // 헤더/푸터가 pageCount(예: 마지막 페이지)에 의존해 높이가 달라지면 페이지 수가
-        // 바뀔 수 있어, 실제 페이지 수가 추정값과 같아질 때까지 placeBlocks만 재실행한다.
-        const measures = await measureBlocks(blocks, columnCount, measurer);
-
-        const maxPasses = 4;
-        let assumedPageCount = lastPageCountRef.current;
-        let result: Page[] = [];
-        for (let pass = 0; pass < maxPasses; pass++) {
-          const placements = await placeBlocks(blocks, columnCount, measures, measurer, {
-            ...(optionsRef.current ?? {}),
-            pageCount: assumedPageCount,
-          });
-          result = groupIntoPages(placements);
-          if (result.length === assumedPageCount) break; // 수렴
-          assumedPageCount = result.length;
-        }
-        lastPageCountRef.current = result.length;
-
+        const placements = await paginate(blocks, columnCount, measurer, optionsRef.current ?? {});
         // 최신 실행만 반영 (계산 중 입력이 또 바뀌었으면 이 결과는 버림)
-        if (myRun === runIdRef.current) setPages(result);
+        if (myRun === runIdRef.current) setPages(groupIntoPages(placements));
       } catch (error) {
         if (myRun === runIdRef.current) {
           console.error('[ColumnPager] pagination failed:', error);

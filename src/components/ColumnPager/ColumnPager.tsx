@@ -20,8 +20,8 @@ import { createDomMeasurer, type MeasurerConfig } from './measure/measureDom';
 /** 숨김 처리용 CSS (DOM은 렌더, 화면에서만 숨김) */
 const HIDDEN_CLASS = 'invisible absolute -top-[9999px] -left-[9999px]';
 
-/** 헤더/푸터 렌더 함수 인자. (첫 페이지 = pageNumber===1, 마지막 = pageNumber===pageCount) */
-export type PageInfo = { pageNumber: number; pageCount: number; section?: string };
+/** 헤더/푸터 렌더 함수 인자 */
+export type PageInfo = { pageNumber: number; section?: string };
 
 export type ColumnPagerProps = {
   children?: ReactNode;
@@ -140,12 +140,10 @@ const ColumnPager = ({
   const measurerConfig: MeasurerConfig = useMemo(
     () => ({
       renderHeader: hasHeader
-        ? (pageIndex: number, pageCount: number) =>
-            headerRef.current?.({ pageNumber: pageIndex + 1, pageCount })
+        ? (pageIndex: number) => headerRef.current?.({ pageNumber: pageIndex + 1 })
         : undefined,
       renderFooter: hasFooter
-        ? (pageIndex: number, pageCount: number) =>
-            footerRef.current?.({ pageNumber: pageIndex + 1, pageCount })
+        ? (pageIndex: number) => footerRef.current?.({ pageNumber: pageIndex + 1 })
         : undefined,
       showDividers,
       columnClassName,
@@ -201,8 +199,8 @@ const ColumnPager = ({
         key={pageIndex}
         columnCount={pageColumnCount}
         columns={page.map((column) => column.map(renderPlacement))}
-        header={header?.({ pageNumber: pageIndex + 1, pageCount: pages.length, section })}
-        footer={footer?.({ pageNumber: pageIndex + 1, pageCount: pages.length, section })}
+        header={header?.({ pageNumber: pageIndex + 1, section })}
+        footer={footer?.({ pageNumber: pageIndex + 1, section })}
         showDividers={showDividers}
         columnClassName={columnClassName}
         pageHeight={pageHeight}

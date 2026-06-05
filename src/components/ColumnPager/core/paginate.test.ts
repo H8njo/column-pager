@@ -1,6 +1,6 @@
 import { createElement, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { groupIntoPages, measureBlocks, paginate, placeBlocks } from './paginate';
+import { groupIntoPages, paginate } from './paginate';
 import type { Block, ContentBlock, Measurer } from './types';
 
 // ----------------------------------------------------------------------------
@@ -116,26 +116,6 @@ describe('paginate — 큰 아이템 슬라이스', () => {
     const blocks = [item(1500, { flowWidth: 900, sliceWidth: 300, contentEnd: 200 })];
     const placements = await paginate(blocks, 1, fakeMeasurer(500));
     expect(placements.map((p) => p.slice?.shiftX)).toEqual([0, 300, 600]);
-  });
-});
-
-describe('pageCount 전달 (마지막 페이지 높이 차 지원)', () => {
-  it('placeBlocks가 pageCount를 columnHeight 측정에 넘긴다', async () => {
-    const seen: number[] = [];
-    const measurer: Measurer = {
-      columnWidth: async () => 300,
-      columnHeight: async (_pageIndex, _columnCount, pageCount) => {
-        seen.push(pageCount);
-        return 1000;
-      },
-      measureItems: async (blocks) =>
-        blocks.map((b) => ({ container: { width: 300, height: heightOf(b) }, sliceWidth: 300 })),
-      measureOverflow: async (b) => overflowOf(b),
-    };
-    const blocks = [item(50), item(50)];
-    const measures = await measureBlocks(blocks, 1, measurer);
-    await placeBlocks(blocks, 1, measures, measurer, { pageCount: 7 });
-    expect(seen).toContain(7);
   });
 });
 

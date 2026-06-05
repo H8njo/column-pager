@@ -59,11 +59,8 @@ export type OverflowMeasure = {
 export interface Measurer {
   /** columnCount에 대한 한 컬럼의 폭 (페이지와 무관하게 안정적) */
   columnWidth(columnCount: number): Promise<number>;
-  /**
-   * 특정 페이지·columnCount의 한 컬럼 가용 높이 (헤더/푸터 높이 반영).
-   * pageCount는 헤더/푸터가 총 페이지 수에 따라 달라질 때 측정에 사용 (예: 마지막 페이지).
-   */
-  columnHeight(pageIndex: number, columnCount: number, pageCount: number): Promise<number>;
+  /** 특정 페이지·columnCount의 한 컬럼 가용 높이 (헤더/푸터 차이 반영) */
+  columnHeight(pageIndex: number, columnCount: number): Promise<number>;
   /** 콘텐츠 블록들의 자연 크기 일괄 측정 */
   measureItems(blocks: ContentBlock[], columnWidth: number): Promise<ItemMeasure[]>;
   /** 단일 오버플로우 블록의 슬라이스 측정 */
@@ -120,9 +117,4 @@ export type Page = Column[];
 export type PaginateOptions = {
   /** 컬럼 높이를 초과하는 아이템을 (자르지 않고) 다음 컬럼으로 먼저 이동 */
   moveOversizedItemToNextColumn?: boolean;
-  /**
-   * 이번 배치에서 가정하는 총 페이지 수 (헤더/푸터가 pageCount에 의존할 때 사용).
-   * 수렴 루프가 실제 페이지 수로 다시 호출한다. 기본 0(= "마지막 페이지" 미지정).
-   */
-  pageCount?: number;
 };
