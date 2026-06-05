@@ -139,4 +139,43 @@ describe('usePagination', () => {
     expect(result.current.pages).toHaveLength(0);
     expect(calls()).toBe(0);
   });
+
+  it('paused→재개 전환 시 계산을 시작한다 (로딩 완료 케이스)', async () => {
+    const { measurer, calls } = makeFake();
+    const { result, rerender } = renderHook(
+      (props: { paused: boolean }) =>
+        usePagination({ children: kids('a', 'b'), columnCount: 1, measurer, paused: props.paused }),
+      { initialProps: { paused: true } },
+    );
+    await Promise.resolve();
+    expect(calls()).toBe(0);
+
+    rerender({ paused: false }); // 재개
+    await waitFor(() => expect(result.current.pages.length).toBe(1));
+    expect(calls()).toBe(1);
+  });
+
+  it('paginate 실패 시 onError를 호출하고 pages는 비워둔다', async () => {
+    const boom = new Error('measure failed');
+    const measurer: Measurer = {
+      columnWidth: async () => 300,
+      columnHeight: async () => 1000,
+      measureItems: async () => {
+        throw boom;
+      },
+      measureOverflow: async () => ({ flowWidth: 0, sliceWidth: 1, contentEnd: 0 }),
+    };
+    const errors: unknown[] = [];
+    const { result } = renderHook(() =>
+      usePagination({
+        children: kids('a', 'b'),
+        columnCount: 1,
+        measurer,
+        onError: (e) => errors.push(e),
+      }),
+    );
+    await waitFor(() => expect(errors).toHaveLength(1));
+    expect(errors[0]).toBe(boom);
+    expect(result.current.pages).toHaveLength(0);
+  });
 });
