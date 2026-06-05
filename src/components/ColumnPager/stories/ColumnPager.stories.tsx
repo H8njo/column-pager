@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import Card from '../../ui/Card';
 import { CARDS, TALL_CARD } from '../../ui/cardData';
 import ColumnPager from '../ColumnPager';
@@ -298,4 +298,84 @@ const PdfPreviewDemo = () => {
 export const PdfPreview: Story = {
   name: 'PDF 출력 미리보기 (iframe)',
   render: () => <PdfPreviewDemo />,
+};
+
+/** 길게 만들기용 샘플 (여러 줄) */
+const LONG_TEXT = Array.from(
+  { length: 30 },
+  (_, i) => `${i + 1}행. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+).join('\n');
+
+/**
+ * 데이터 편집 → 즉시 반영.
+ * 가운데 카드의 내용을 textarea로 바꾸면 그 카드만 재측정되어 거의 즉시 재배치된다.
+ * 좌상단에 반영(emit) 소요 ms와 총 페이지 수 표시. ([길게]를 눌러 짧은→긴 변화 확인)
+ */
+const EditableDemo = () => {
+  const [text, setText] = useState('짧은 한 줄짜리 내용입니다.');
+  const [pageCount, setPageCount] = useState(0);
+  const [elapsed, setElapsed] = useState<number | null>(null);
+  const editStartRef = useRef(0);
+
+  const edit = (value: string) => {
+    editStartRef.current = performance.now();
+    setText(value);
+  };
+
+  const lines = text.trim() ? text.split('\n') : ['(빈 내용)'];
+
+  return (
+    <>
+      <div className="fixed top-2 left-2 z-10 w-[320px] space-y-2 rounded bg-white p-3 shadow">
+        <div className="font-mono text-xs text-gray-600">
+          반영(emit): {elapsed === null ? '-' : `${elapsed}ms`} · 총 {pageCount} 페이지
+        </div>
+        <textarea
+          className="h-28 w-full rounded border border-gray-300 p-2 text-xs"
+          value={text}
+          onChange={(e) => edit(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="rounded bg-blue-600 px-2 py-1 text-xs text-white"
+            onClick={() => edit('짧은 한 줄짜리 내용입니다.')}
+          >
+            짧게
+          </button>
+          <button
+            type="button"
+            className="rounded bg-blue-600 px-2 py-1 text-xs text-white"
+            onClick={() => edit(LONG_TEXT)}
+          >
+            길게
+          </button>
+        </div>
+      </div>
+
+      <ColumnPager
+        columnCount={2}
+        showDividers
+        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+        onPagesGenerated={(pages) => {
+          setPageCount(pages.length);
+          if (editStartRef.current)
+            setElapsed(Math.round(performance.now() - editStartRef.current));
+        }}
+      >
+        {renderCards(CARDS.slice(0, 4))}
+        <Fragment key="editable">
+          <Card number={5} title="✏️ 편집 카드 (중간)" lines={lines} />
+          <div className="h-4" />
+        </Fragment>
+        {renderCards(CARDS.slice(5, 12))}
+      </ColumnPager>
+    </>
+  );
+};
+
+export const EditableContent: Story = {
+  name: '데이터 편집 → 즉시 반영',
+  render: () => <EditableDemo />,
 };
