@@ -9,4 +9,7 @@
  * - 컴파운드 컨트롤: ColumnPager.PageBreak / .ColumnBreak / .SectionMark / .StableGate
  */
 export * from './components/ColumnPager';
-export { convertElementToHtmlString } from './lib/pdf/convertElementToHtmlString';
+export {
+  convertElementToHtmlString,
+  type HtmlDocumentOptions,
+} from './lib/pdf/convertElementToHtmlString';

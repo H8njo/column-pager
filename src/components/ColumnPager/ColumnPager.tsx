@@ -1,5 +1,8 @@
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
-import { convertElementToHtmlString } from '../../lib/pdf/convertElementToHtmlString';
+import {
+  convertElementToHtmlString,
+  type HtmlDocumentOptions,
+} from '../../lib/pdf/convertElementToHtmlString';
 import Container from './components/Container';
 import ItemCell from './components/ItemCell';
 import { STABLE_ATTR, stableSelector } from './components/keys';
@@ -55,6 +58,8 @@ export type ColumnPagerProps = {
   onStableTimeout?: () => void;
   /** 페이지네이션(측정/계산) 실패 콜백 */
   onError?: (error: unknown) => void;
+  /** PDF용 HTML 문서 옵션 (폰트/페이지/기본 스타일 커스터마이즈) */
+  htmlOptions?: HtmlDocumentOptions;
 };
 
 /** 컨테이너 내 모든 StableGate가 stable 인지 */
@@ -94,6 +99,7 @@ const ColumnPager = ({
   stableTimeoutMs = 5000,
   onStableTimeout,
   onError,
+  htmlOptions,
 }: ColumnPagerProps) => {
   const pageDims = useMemo(
     () => resolvePageSize(pageSize, orientation, pageWidth, pageHeight),
@@ -172,6 +178,8 @@ const ColumnPager = ({
 
   // ---- HTML emit: stable 폴링 + 타임아웃 (결정 #4) ----
   const lastEmitted = useRef<PageData[] | null>(null);
+  const htmlOptionsRef = useRef(htmlOptions);
+  htmlOptionsRef.current = htmlOptions;
 
   useEffect(() => {
     if (loading || pages.length === 0) {
@@ -187,7 +195,7 @@ const ColumnPager = ({
     const startedAt = Date.now();
 
     const emit = () => {
-      const htmlString = convertElementToHtmlString(container.outerHTML);
+      const htmlString = convertElementToHtmlString(container.outerHTML, htmlOptionsRef.current);
       onPagesGenerated(pages, htmlString);
       lastEmitted.current = pages;
     };
