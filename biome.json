@@ -39,7 +39,17 @@
         "useValidAriaProps": "error"
       },
       "style": {
-        "useNamingConvention": "error",
+        "useNamingConvention": {
+          "level": "error",
+          "options": {
+            "conventions": [
+              {
+                "selector": { "kind": "objectLiteralProperty" },
+                "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+              }
+            ]
+          }
+        },
         "useFilenamingConvention": {
           "level": "error",
           "options": {
