@@ -11,7 +11,7 @@ import SectionMark from './controls/SectionMark';
 import StableGate from './controls/StableGate';
 import type { Page as PageData, Placement } from './core/types';
 import usePagination from './hooks/usePagination';
-import type { MeasurerConfig } from './measure/measureDom';
+import { createDomMeasurer, type MeasurerConfig } from './measure/measureDom';
 
 /** 숨김 처리용 CSS (DOM은 렌더, 화면에서만 숨김) */
 const HIDDEN_CLASS = 'invisible absolute -top-[9999px] -left-[9999px]';
@@ -45,6 +45,8 @@ export type ColumnPagerProps = {
   stableTimeoutMs?: number;
   /** stable 타임아웃 발생 시 콜백 */
   onStableTimeout?: () => void;
+  /** 페이지네이션(측정/계산) 실패 콜백 */
+  onError?: (error: unknown) => void;
 };
 
 /** 컨테이너 내 모든 StableGate가 stable 인지 */
@@ -79,6 +81,7 @@ const ColumnPager = ({
   onPagesGenerated,
   stableTimeoutMs = 5000,
   onStableTimeout,
+  onError,
 }: ColumnPagerProps) => {
   const measurerConfig: MeasurerConfig = useMemo(
     () => ({
@@ -90,12 +93,17 @@ const ColumnPager = ({
     [header, footer, showDividers, columnClassName],
   );
 
+  // measurer는 config가 바뀔 때만 새로 생성 → 캐시가 run 간 유지되고,
+  // 설정 변경 시엔 새 인스턴스가 주입되어 재페이지네이션이 트리거된다.
+  const measurer = useMemo(() => createDomMeasurer(measurerConfig), [measurerConfig]);
+
   const { pages, contentBlocks } = usePagination({
     children,
     columnCount,
-    measurerConfig,
+    measurer,
     options: { moveOversizedItemToNextColumn },
     paused: loading,
+    onError,
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
