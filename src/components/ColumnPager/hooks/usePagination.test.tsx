@@ -67,6 +67,25 @@ describe('usePagination', () => {
     expect(calls()).toBe(1);
   });
 
+  it('options 값이 바뀌면 재계산한다 (예: moveOversizedItemToNextColumn 토글)', async () => {
+    const { measurer, calls } = makeFake();
+    const { result, rerender } = renderHook(
+      (props: { options: object }) =>
+        usePagination({
+          children: kids('a', 'b'),
+          columnCount: 1,
+          measurer,
+          options: props.options,
+        }),
+      { initialProps: { options: { moveOversizedItemToNextColumn: false } } },
+    );
+    await waitFor(() => expect(result.current.pages.length).toBe(1));
+    expect(calls()).toBe(1);
+
+    rerender({ options: { moveOversizedItemToNextColumn: true } }); // 값 변경 → 재계산
+    await waitFor(() => expect(calls()).toBe(2));
+  });
+
   it('내용이 바뀌면 길이가 같아도 재계산한다 (V1 버그 수정)', async () => {
     const { measurer, calls } = makeFake();
     const { result, rerender } = renderHook(

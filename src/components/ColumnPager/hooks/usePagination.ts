@@ -42,6 +42,9 @@ const usePagination = ({
 }: UsePaginationArgs): UsePaginationResult => {
   // signature: 재페이지네이션 트리거(구조 변화 감지)
   const signature = useMemo(() => blocksSignature(children), [children]);
+  // options(예: moveOversizedItemToNextColumn)도 배치 결과를 바꾸므로 트리거에 포함.
+  // 매 렌더 새 객체로 와도 직렬화 키는 내용이 같으면 안정적 → 토글 시에만 재계산.
+  const optionsKey = useMemo(() => JSON.stringify(options ?? {}), [options]);
   // blocks/contentBlocks: 렌더용 — 최신 children 노드를 반영해야 한다.
   // (signature가 같아도 비구조적 prop 변경 — 예: StableGate의 stable — 이 화면에 반영되도록)
   const blocks = useMemo(() => toBlocks(children), [children]);
@@ -53,6 +56,7 @@ const usePagination = ({
     signature: string;
     columnCount: number;
     measurer: Measurer;
+    optionsKey: string;
   } | null>(null);
 
   const optionsRef = useRef(options);
@@ -65,7 +69,7 @@ const usePagination = ({
 
     if (blocks.length === 0) {
       setPages([]);
-      lastInputsRef.current = { signature, columnCount, measurer };
+      lastInputsRef.current = { signature, columnCount, measurer, optionsKey };
       return;
     }
 
@@ -73,11 +77,12 @@ const usePagination = ({
     const sameInputs =
       prev?.signature === signature &&
       prev.columnCount === columnCount &&
-      prev.measurer === measurer;
+      prev.measurer === measurer &&
+      prev.optionsKey === optionsKey;
     if (sameInputs && pages.length > 0) return;
 
     const myRun = ++runIdRef.current;
-    lastInputsRef.current = { signature, columnCount, measurer };
+    lastInputsRef.current = { signature, columnCount, measurer, optionsKey };
 
     (async () => {
       try {
@@ -91,7 +96,7 @@ const usePagination = ({
         }
       }
     })();
-  }, [signature, blocks, columnCount, measurer, paused, pages.length]);
+  }, [signature, blocks, columnCount, measurer, paused, pages.length, optionsKey]);
 
   return { pages, contentBlocks };
 };
