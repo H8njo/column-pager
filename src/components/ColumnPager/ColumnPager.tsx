@@ -13,8 +13,13 @@ import type { Page as PageData, Placement } from './core/types';
 import usePagination from './hooks/usePagination';
 import { createDomMeasurer, type MeasurerConfig } from './measure/measureDom';
 
-/** 숨김 처리용 CSS (DOM은 렌더, 화면에서만 숨김) */
-const HIDDEN_CLASS = 'invisible absolute -top-[9999px] -left-[9999px]';
+/**
+ * 숨김 처리용 CSS (DOM은 렌더, 화면에서만 숨김).
+ * absolute로 흐름에서 빼면 폭이 0으로 축소돼 ResizeObserver가 0을 측정 → 영구 paused가 되어
+ * onPagesGenerated가 영영 안 fire된다(hidden 측정 전용 용도가 깨짐). 흐름 안에 두되 높이만
+ * 0으로 접고 overflow를 숨겨, 폭은 정상 측정되면서 화면엔 안 보이고 세로 공간도 안 먹게 한다.
+ */
+const HIDDEN_CLASS = 'invisible h-0 overflow-hidden';
 
 /** 헤더/푸터 렌더 함수 인자 */
 export type PageInfo = { pageNumber: number; section?: string };
