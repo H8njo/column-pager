@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Fragment } from 'react';
+import Card from '../../ui/Card';
+import { CARDS, TALL_CARD } from '../../ui/cardData';
 import ColumnPager from '../ColumnPager';
 
 /**
@@ -11,8 +13,8 @@ import ColumnPager from '../ColumnPager';
  *
  * Compound: `ColumnPager.PageBreak / .ColumnBreak / .SectionMark / .StableGate`
  *
- * 이 스토리는 측정/슬라이스 렌더의 브라우저 통합 검증 용도이기도 하다
- * (happy-dom에선 레이아웃 측정이 0이므로 실제 브라우저에서 확인).
+ * 콘텐츠 카드는 ui/Card (faker, 고정 시드)를 사용한다. 이 스토리는 측정/슬라이스
+ * 렌더의 브라우저 통합 검증 용도이기도 하다(happy-dom에선 측정이 0).
  */
 type StoryArgs = {
   columnCount: number;
@@ -54,22 +56,18 @@ const SampleFooter = ({ pageNumber }: { pageNumber: number }) => (
   </div>
 );
 
-const Card = ({ title, height = 'auto' }: { title: string; height?: string | number }) => (
-  <div
-    className="rounded-md border border-blue-200 bg-blue-50 p-4"
-    style={{ height: typeof height === 'number' ? `${height}px` : height }}
-  >
-    <h3 className="mb-2 font-semibold text-blue-800">{title}</h3>
-    <p className="text-sm text-blue-600">
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-      labore et dolore magna aliqua.
-    </p>
-  </div>
-);
+/** 카드 목록을 ColumnPager children으로 (사이 간격 포함) */
+const renderCards = (cards: typeof CARDS) =>
+  cards.map((card) => (
+    <Fragment key={card.number}>
+      <Card {...card} />
+      <div className="h-4" />
+    </Fragment>
+  ));
 
 export const Default: Story = {
   name: '기본 (1컬럼)',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: false },
+  args: { columnCount: 1, pageDirection: 'vertical', showDividers: false },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
@@ -78,12 +76,7 @@ export const Default: Story = {
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Fragment key={`s${i + 1}`}>
-          <Card title={`Section ${i + 1}`} />
-          <div className="h-4" />
-        </Fragment>
-      ))}
+      {renderCards(CARDS.slice(0, 8))}
     </ColumnPager>
   ),
 };
@@ -99,12 +92,7 @@ export const TwoColumns: Story = {
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
-      {Array.from({ length: 23 }).map((_, i) => (
-        <Fragment key={`i${i + 1}`}>
-          <Card title={`Item ${i + 1}`} />
-          <div className="h-4" />
-        </Fragment>
-      ))}
+      {renderCards(CARDS.slice(0, 40))}
     </ColumnPager>
   ),
 };
@@ -120,11 +108,11 @@ export const WithPageBreak: Story = {
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
-      <Card title="Page 1 - A" />
+      <Card {...CARDS[0]} />
       <ColumnPager.ColumnBreak />
-      <Card title="Page 1 - B (다음 컬럼)" />
+      <Card {...CARDS[1]} />
       <ColumnPager.PageBreak />
-      <Card title="Page 2 - A" />
+      <Card {...CARDS[2]} />
     </ColumnPager>
   ),
 };
@@ -140,10 +128,12 @@ export const TallItemSlicing: Story = {
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
-      <Card title="앞 콘텐츠" />
-      {/* 컬럼 높이를 초과하는 키 큰 아이템 → 여러 컬럼으로 잘려 이어짐 */}
-      <Card title="아주 긴 콘텐츠" height={2500} />
-      <Card title="뒤 콘텐츠" />
+      <Card {...CARDS[3]} />
+      <div className="h-4" />
+      {/* 컬럼 높이를 초과하는 키 큰 카드 → 여러 컬럼으로 잘려 이어짐 */}
+      <Card {...TALL_CARD} />
+      <div className="h-4" />
+      <Card {...CARDS[4]} />
     </ColumnPager>
   ),
 };

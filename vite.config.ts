@@ -18,6 +18,8 @@ export default defineConfig({
         'src/test/**',
         'src/App.tsx',
         'src/main.tsx',
+        // 예시 전용(Storybook) — 배포 산출물에서 제외
+        'src/components/ui/**',
       ],
       insertTypesEntry: true,
     }),
