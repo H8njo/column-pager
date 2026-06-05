@@ -101,6 +101,18 @@ export const paginate = async (
     const columnHeight = await measurer.columnHeight(cursor.pageIndex, cursor.columnCount);
     const itemHeight = measure.container.height;
 
+    // 가드: 컬럼 높이 측정 실패(<=0) 시 슬라이싱하면 퇴화/과도 분할 → 그냥 현재 위치에 배치
+    if (columnHeight <= 0) {
+      placements.push({
+        blockIndex,
+        pageIndex: cursor.pageIndex,
+        columnIndex: cursor.columnIndex,
+        columnCount: cursor.columnCount,
+        section,
+      });
+      continue;
+    }
+
     // ---- 큰 아이템: 슬라이스 분할 ----
     if (itemHeight > columnHeight) {
       const remainingHeight = columnHeight - cursor.filledHeight;

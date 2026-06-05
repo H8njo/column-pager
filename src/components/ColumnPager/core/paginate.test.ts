@@ -119,6 +119,15 @@ describe('paginate — 큰 아이템 슬라이스', () => {
   });
 });
 
+describe('paginate — 측정 실패 가드', () => {
+  it('columnHeight<=0 이면 슬라이스 없이 그대로 배치 (퇴화/무한분할 방지)', async () => {
+    const blocks = [item(1500, { flowWidth: 900, sliceWidth: 300, contentEnd: 200 }), item(50)];
+    const placements = await paginate(blocks, 1, fakeMeasurer(0));
+    expect(placements).toHaveLength(2);
+    expect(placements.every((p) => p.slice === undefined)).toBe(true);
+  });
+});
+
 describe('groupIntoPages', () => {
   it('Placement[] → Page[][] 페이지/컬럼 구조', async () => {
     const blocks = [item(200), item(200), item(200)];

@@ -11,6 +11,8 @@ export { default as ColumnPager } from './ColumnPager';
 export type { PageBreakProps } from './controls/PageBreak';
 export type { SectionMarkProps } from './controls/SectionMark';
 export type { StableGateProps } from './controls/StableGate';
+// 배치 결과 조회 유틸
+export { findItemPage, getPageCount, isSliced } from './core/query';
 // 섹션 페이지 범위 유틸
 export { getSectionPageRanges, type SectionPageRanges } from './core/sectionRanges';
 // 공개 데이터 타입
