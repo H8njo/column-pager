@@ -12,6 +12,15 @@ describe('sliceCount', () => {
     expect(sliceCount(0, 697)).toBe(1);
     expect(sliceCount(2090, 0)).toBe(1);
   });
+
+  it('NaN/Infinity flowWidth는 1로 방어 (콘텐츠 증발 방지)', () => {
+    expect(sliceCount(Number.NaN, 697)).toBe(1);
+    expect(sliceCount(Number.POSITIVE_INFINITY, 697)).toBe(1);
+  });
+
+  it('병리적 입력은 상한(1000)으로 캡 (프리즈 방지)', () => {
+    expect(sliceCount(10_000_000, 1)).toBe(1000);
+  });
 });
 
 describe('firstSliceClip', () => {

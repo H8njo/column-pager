@@ -91,6 +91,10 @@ const ColumnPager = ({
 }: ColumnPagerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // pageHeight<=0이면 columnHeight가 0이 되어 모든 아이템이 한 자리에 쌓여 클리핑된다.
+  // 잘못된 입력은 기본값으로 폴백.
+  const safePageHeight = pageHeight > 0 ? pageHeight : DEFAULT_PAGE_HEIGHT;
+
   // 콜백/렌더 함수의 "식별자 변화"가 재계산/재emit을 유발하지 않도록 ref로 분리한다.
   // (소비자가 header/footer/onPagesGenerated를 인라인 함수로 넘기는 흔한 패턴에서
   //  measurer가 매 렌더 재생성 → 무한 재페이지네이션 루프가 되는 것을 방지)
@@ -141,9 +145,9 @@ const ColumnPager = ({
       showDividers,
       columnClassName,
       containerWidth,
-      pageHeight,
+      pageHeight: safePageHeight,
     }),
-    [hasHeader, hasFooter, showDividers, columnClassName, containerWidth, pageHeight],
+    [hasHeader, hasFooter, showDividers, columnClassName, containerWidth, safePageHeight],
   );
 
   // measurer는 config(컨테이너 폭 포함)가 바뀔 때만 새로 생성 → 캐시 유지 + 폭 변경 시 재페이지네이션.
@@ -196,7 +200,7 @@ const ColumnPager = ({
         footer={footer?.({ pageNumber: pageIndex + 1, section })}
         showDividers={showDividers}
         columnClassName={columnClassName}
-        pageHeight={pageHeight}
+        pageHeight={safePageHeight}
       />
     );
   });

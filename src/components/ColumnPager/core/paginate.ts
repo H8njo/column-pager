@@ -30,6 +30,9 @@ const advancePage = (cursor: Cursor): void => {
   cursor.filledHeight = 0;
 };
 
+/** 컬럼 수를 1 이상의 정수로 보정 (0/음수/소수 입력 방어) */
+const clampColumnCount = (count: number | undefined): number => Math.max(1, Math.floor(count || 1));
+
 /** 컬럼이 꽉 찼으면 다음 페이지로 래핑 (슬라이스 루프용) */
 const wrapIfColumnFull = (cursor: Cursor): void => {
   if (cursor.columnIndex >= cursor.columnCount) {
@@ -57,7 +60,7 @@ export const paginate = async (
     pageIndex: 0,
     columnIndex: 0,
     filledHeight: 0,
-    columnCount: initialColumnCount,
+    columnCount: clampColumnCount(initialColumnCount),
   };
 
   let columnWidth = await measurer.columnWidth(cursor.columnCount);
@@ -75,8 +78,9 @@ export const paginate = async (
 
     if (block.kind === 'pageBreak') {
       advancePage(cursor);
-      if (block.columnCount && block.columnCount !== cursor.columnCount) {
-        cursor.columnCount = block.columnCount;
+      const nextColumnCount = block.columnCount ? clampColumnCount(block.columnCount) : undefined;
+      if (nextColumnCount && nextColumnCount !== cursor.columnCount) {
+        cursor.columnCount = nextColumnCount;
         // 남은 콘텐츠 블록을 새 컬럼 폭으로 재측정 (V1 동작 이식)
         columnWidth = await measurer.columnWidth(cursor.columnCount);
         const remaining = await measurer.measureItems(

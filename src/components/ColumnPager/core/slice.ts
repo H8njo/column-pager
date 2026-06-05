@@ -14,9 +14,19 @@ import type { Slice } from './types';
  * 서브픽셀 반올림으로 인한 컬럼 누락 방지: floor 대신 round.
  * (예: flowWidth=2090, sliceWidth=697 → 2.998이지만 실제로는 3 컬럼)
  */
+/**
+ * 한 아이템이 만들 수 있는 슬라이스 조각 수 상한.
+ * 병리적 입력(아주 넓은 unbreakable 콘텐츠, 레이아웃 레이스로 sliceWidth=1px 등)에서
+ * count가 폭주해 measurer.columnHeight를 수천 번 await → 메인스레드 프리즈/OOM 되는 것을 막는다.
+ */
+const MAX_SLICE_COUNT = 1000;
+
 export const sliceCount = (flowWidth: number, sliceWidth: number): number => {
   if (sliceWidth <= 0) return 1;
-  return Math.max(1, Math.round(flowWidth / sliceWidth));
+  const count = Math.round(flowWidth / sliceWidth);
+  // NaN/Infinity(측정 실패·폰트 스왑 중 0크기 등) 방어: 조각 0개로 콘텐츠가 사라지는 것을 막는다.
+  if (!Number.isFinite(count)) return 1;
+  return Math.min(MAX_SLICE_COUNT, Math.max(1, count));
 };
 
 /** 첫 조각의 클립 높이 (이어받기 중이면 남은 높이만큼만) */

@@ -119,6 +119,59 @@ describe('paginate — 큰 아이템 슬라이스', () => {
   });
 });
 
+describe('paginate — 큰 아이템: 이어받기(carry) / 다음 컬럼 이동(advancing)', () => {
+  it('일부 채워진 컬럼에서 carry: 첫 조각이 남은 공간부터 이어지고 carryOffset/shiftY=채워진 높이', async () => {
+    // col0에 100 채운 뒤 1500 오버사이즈 → advancing 아님(남은 400 > 5%) → carry=100
+    const blocks = [item(100), item(1500, { flowWidth: 900, sliceWidth: 300, contentEnd: 200 })];
+    const placements = await paginate(blocks, 1, fakeMeasurer(500));
+
+    const slices = placements.filter((p) => p.slice);
+    expect(slices[0].slice?.carryOffset).toBe(100);
+    expect(slices[0].slice?.shiftY).toBe(100);
+    // 첫 조각은 앞 아이템과 같은 컬럼(col0)에서 이어짐
+    expect(slices[0]).toMatchObject({ pageIndex: 0, columnIndex: 0 });
+  });
+
+  it('moveOversizedItemToNextColumn: 채워진 컬럼이면 다음 컬럼 맨 위에서 시작(carry=0)', async () => {
+    const blocks = [item(100), item(1500, { flowWidth: 900, sliceWidth: 300, contentEnd: 200 })];
+    const placements = await paginate(blocks, 2, fakeMeasurer(500), {
+      moveOversizedItemToNextColumn: true,
+    });
+
+    const slices = placements.filter((p) => p.slice);
+    // col0(앞 아이템) → 오버사이즈는 col1로 advance
+    expect(slices[0]).toMatchObject({ pageIndex: 0, columnIndex: 1 });
+    expect(slices[0].slice?.carryOffset).toBe(0);
+    expect(slices[0].slice?.shiftY).toBe(0);
+  });
+});
+
+describe('paginate — 입력 방어', () => {
+  it('빈 입력 → [] (measurer 측정 없이)', async () => {
+    let measured = false;
+    const spyMeasurer: Measurer = {
+      columnWidth: async () => 300,
+      columnHeight: async () => 500,
+      measureItems: async (blocks) => {
+        measured = true;
+        return blocks.map(() => ({ container: { width: 300, height: 0 }, sliceWidth: 300 }));
+      },
+      measureOverflow: async () => ({ flowWidth: 0, sliceWidth: 1, contentEnd: 0 }),
+    };
+    const placements = await paginate([], 1, spyMeasurer);
+    expect(placements).toEqual([]);
+    expect(measured).toBe(true); // measureItems([])는 호출되나 빈 배열
+  });
+
+  it('columnCount 0/음수는 1로 보정', async () => {
+    const blocks = [item(100), item(100), item(100)];
+    const placements = await paginate(blocks, 0, fakeMeasurer(250));
+    expect(placements.every((p) => p.columnCount === 1)).toBe(true);
+    // 1컬럼처럼: 100,200 → page0; 300>250 → page1
+    expect(placements.map((p) => p.pageIndex)).toEqual([0, 0, 1]);
+  });
+});
+
 describe('paginate — 측정 실패 가드', () => {
   it('columnHeight<=0 이면 슬라이스 없이 그대로 배치 (퇴화/무한분할 방지)', async () => {
     const blocks = [item(1500, { flowWidth: 900, sliceWidth: 300, contentEnd: 200 }), item(50)];
