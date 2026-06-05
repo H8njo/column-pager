@@ -9,7 +9,7 @@ import type { Page } from '../core/types';
 /**
  * ColumnPager - PDF 페이지네이션 컴포넌트 (재설계판)
  *
- * children을 A4 페이지에 맞게 자동 분할한다.
+ * children을 컨테이너 폭(반응형) × pageHeight 페이지에 맞게 자동 분할한다.
  * - 작은 요소: 컬럼을 채우다 넘치면 다음 컬럼/페이지
  * - 큰 요소: CSS 멀티컬럼으로 잘라 이어 표현
  *
@@ -165,38 +165,6 @@ export const DynamicColumnCount: Story = {
       <ColumnPager.PageBreak changeColumnCountTo={3} />
       {/* 3컬럼 */}
       {renderCards(CARDS.slice(15, 33))}
-    </ColumnPager>
-  ),
-};
-
-/**
- * 페이지 크기/방향 (pageSize · orientation).
- * 컨트롤로 A4/letter/legal × portrait/landscape 조합을 바꿔본다.
- */
-type PageSizeArgs = {
-  pageSize: 'A4' | 'letter' | 'legal';
-  orientation: 'portrait' | 'landscape';
-  columnCount: number;
-};
-
-export const PageSizeOrientation: StoryObj<PageSizeArgs> = {
-  name: '페이지 크기 / 방향',
-  args: { pageSize: 'letter', orientation: 'landscape', columnCount: 3 },
-  argTypes: {
-    pageSize: { control: 'radio', options: ['A4', 'letter', 'legal'] },
-    orientation: { control: 'radio', options: ['portrait', 'landscape'] },
-    columnCount: { control: { type: 'number', min: 1, max: 4 } },
-  },
-  render: (args) => (
-    <ColumnPager
-      pageSize={args.pageSize}
-      orientation={args.orientation}
-      columnCount={args.columnCount}
-      showDividers
-      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
-      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
-    >
-      {renderCards(CARDS.slice(0, 30))}
     </ColumnPager>
   ),
 };

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   convertElementToHtmlString,
   type HtmlDocumentOptions,
@@ -7,7 +7,7 @@ import Container from './components/Container';
 import ItemCell from './components/ItemCell';
 import { STABLE_ATTR, stableSelector } from './components/keys';
 import Page from './components/Page';
-import { type Orientation, type PageSizeName, resolvePageSize } from './components/pageSize';
+import { DEFAULT_PAGE_HEIGHT } from './components/PageSheet';
 import SliceView from './components/SliceView';
 import ColumnBreak from './controls/ColumnBreak';
 import PageBreak from './controls/PageBreak';
@@ -29,13 +29,10 @@ export type ColumnPagerProps = {
   columnCount?: number;
   /** 페이지 나열 방향 (기본 vertical) */
   pageDirection?: 'horizontal' | 'vertical';
-  /** 페이지 크기 프리셋 (기본 'A4') */
-  pageSize?: PageSizeName;
-  /** 페이지 방향 (기본 'portrait') */
-  orientation?: Orientation;
-  /** 페이지 폭/높이 직접 지정 (px) — 프리셋보다 우선 */
-  pageWidth?: number;
+  /** 페이지 높이 (px). 폭은 컨테이너에 맞춰 반응형. 기본 1123. */
   pageHeight?: number;
+  /** 컨테이너 폭 변경 후 재페이지네이션까지의 디바운스 (ms). 기본 150. */
+  resizeDebounceMs?: number;
   /** 로딩 중이면 계산/렌더 보류 */
   loading?: boolean;
   /** 화면에서 숨김 (onPagesGenerated용으로 DOM은 유지) */
@@ -50,7 +47,7 @@ export type ColumnPagerProps = {
   header?: (info: PageInfo) => ReactNode;
   /** 페이지 푸터 렌더 */
   footer?: (info: PageInfo) => ReactNode;
-  /** 페이지 생성 완료 콜백 (pages, PDF용 htmlString) */
+  /** 페이지 생성 완료 콜백 (pages, htmlString) */
   onPagesGenerated?: (pages: PageData[], htmlString: string) => void;
   /** stable 폴링 타임아웃 (ms). 초과 시 onStableTimeout 후 강제 emit. 기본 5000. */
   stableTimeoutMs?: number;
@@ -58,7 +55,7 @@ export type ColumnPagerProps = {
   onStableTimeout?: () => void;
   /** 페이지네이션(측정/계산) 실패 콜백 */
   onError?: (error: unknown) => void;
-  /** PDF용 HTML 문서 옵션 (폰트/페이지/기본 스타일 커스터마이즈) */
+  /** HTML 문서 옵션 (폰트/페이지/기본 스타일 커스터마이즈) */
   htmlOptions?: HtmlDocumentOptions;
 };
 
@@ -84,10 +81,8 @@ const ColumnPager = ({
   children,
   columnCount = 1,
   pageDirection = 'vertical',
-  pageSize = 'A4',
-  orientation = 'portrait',
-  pageWidth,
-  pageHeight,
+  pageHeight = DEFAULT_PAGE_HEIGHT,
+  resizeDebounceMs = 150,
   loading,
   hidden,
   columnClassName,
@@ -101,10 +96,28 @@ const ColumnPager = ({
   onError,
   htmlOptions,
 }: ColumnPagerProps) => {
-  const pageDims = useMemo(
-    () => resolvePageSize(pageSize, orientation, pageWidth, pageHeight),
-    [pageSize, orientation, pageWidth, pageHeight],
-  );
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 컨테이너 폭을 측정(반응형). 리사이즈는 디바운스 후 반영 → 재페이지네이션.
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver((entries) => {
+      const width = Math.round(entries[0]?.contentRect.width ?? 0);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setContainerWidth(width), resizeDebounceMs);
+    });
+    observer.observe(el);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [resizeDebounceMs]);
 
   const measurerConfig: MeasurerConfig = useMemo(
     () => ({
@@ -112,14 +125,13 @@ const ColumnPager = ({
       renderFooter: footer ? (pageIndex) => footer({ pageNumber: pageIndex + 1 }) : undefined,
       showDividers,
       columnClassName,
-      pageWidth: pageDims.width,
-      pageHeight: pageDims.height,
+      containerWidth,
+      pageHeight,
     }),
-    [header, footer, showDividers, columnClassName, pageDims],
+    [header, footer, showDividers, columnClassName, containerWidth, pageHeight],
   );
 
-  // measurer는 config가 바뀔 때만 새로 생성 → 캐시가 run 간 유지되고,
-  // 설정 변경 시엔 새 인스턴스가 주입되어 재페이지네이션이 트리거된다.
+  // measurer는 config(컨테이너 폭 포함)가 바뀔 때만 새로 생성 → 캐시 유지 + 폭 변경 시 재페이지네이션.
   const measurer = useMemo(() => createDomMeasurer(measurerConfig), [measurerConfig]);
 
   const { pages, contentBlocks } = usePagination({
@@ -127,11 +139,10 @@ const ColumnPager = ({
     columnCount,
     measurer,
     options: { moveOversizedItemToNextColumn },
-    paused: loading,
+    // 폭이 아직 측정되지 않았으면(0) 보류 — 0폭 측정은 무의미
+    paused: loading || containerWidth === 0,
     onError,
   });
-
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // ---- 렌더: placement → ItemCell / SliceView ----
   const renderPlacement = (placement: Placement): ReactNode => {
@@ -170,8 +181,7 @@ const ColumnPager = ({
         footer={footer?.({ pageNumber: pageIndex + 1, section })}
         showDividers={showDividers}
         columnClassName={columnClassName}
-        pageWidth={pageDims.width}
-        pageHeight={pageDims.height}
+        pageHeight={pageHeight}
       />
     );
   });
@@ -224,7 +234,6 @@ const ColumnPager = ({
       });
     };
 
-    // 2프레임 워밍업 후 폴링 시작
     rafId = requestAnimationFrame(() => {
       rafId = requestAnimationFrame(tick);
     });
@@ -234,8 +243,7 @@ const ColumnPager = ({
     };
   }, [pages, loading, onPagesGenerated, stableTimeoutMs, onStableTimeout]);
 
-  if (loading || pages.length === 0) return null;
-
+  // 컨테이너는 항상 렌더 — ResizeObserver가 폭을 측정해야 첫 페이지네이션이 시작된다.
   return (
     <div className={hidden ? HIDDEN_CLASS : undefined}>
       <Container ref={containerRef} pageDirection={pageDirection}>

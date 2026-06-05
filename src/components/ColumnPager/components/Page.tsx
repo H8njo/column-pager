@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import A4 from './A4';
 import Body from './Body';
 import Column from './Column';
 import Footer from './Footer';
 import Header from './Header';
+import PageSheet from './PageSheet';
 
 type PageProps = {
   /** 컬럼별 내용 (length = columnCount). 측정 시엔 빈 배열/널을 넘김. */
@@ -13,12 +13,11 @@ type PageProps = {
   footer?: ReactNode;
   showDividers?: boolean;
   columnClassName?: string;
-  /** 페이지 폭/높이 (기본 A4) */
-  pageWidth?: number;
+  /** 페이지 높이 (px). 폭은 컨테이너 반응형. */
   pageHeight?: number;
 };
 
-/** 한 페이지: Header / Body(Column×N) / Footer */
+/** 한 페이지: Header / Body(Column×N) / Footer. 폭은 컨테이너 반응형. */
 const Page = ({
   columns,
   columnCount,
@@ -26,10 +25,9 @@ const Page = ({
   footer,
   showDividers,
   columnClassName,
-  pageWidth,
   pageHeight,
 }: PageProps) => (
-  <A4 width={pageWidth} height={pageHeight}>
+  <PageSheet height={pageHeight}>
     <Header>{header}</Header>
     <Body columnCount={columnCount} showDividers={showDividers}>
       {Array.from({ length: columnCount }).map((_, colIndex) => (
@@ -39,7 +37,7 @@ const Page = ({
       ))}
     </Body>
     <Footer>{footer}</Footer>
-  </A4>
+  </PageSheet>
 );
 
 export default Page;

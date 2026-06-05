@@ -1,14 +1,12 @@
 /**
  * ColumnPager
  *
- * React children을 A4 페이지로 자동 페이지네이션. 작은 요소는 컬럼을 채우며 흐르고,
+ * React children을 반응형 멀티컬럼 페이지로 자동 페이지네이션. 작은 요소는 컬럼을 채우며 흐르고,
  * 컬럼 높이를 초과하는 요소는 CSS 멀티컬럼 기법으로 잘라 여러 컬럼/페이지에 이어 표현.
  */
 
 export type { ColumnPagerProps, PageInfo } from './ColumnPager';
 export { default as ColumnPager } from './ColumnPager';
-// 페이지 크기 프리셋/타입
-export { type Orientation, PAGE_PRESETS, type PageSizeName } from './components/pageSize';
 // 컨트롤 props 타입 (컴파운드 API: ColumnPager.PageBreak 등)
 export type { PageBreakProps } from './controls/PageBreak';
 export type { SectionMarkProps } from './controls/SectionMark';

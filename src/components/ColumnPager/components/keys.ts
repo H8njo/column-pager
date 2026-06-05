@@ -6,7 +6,7 @@
  * 만 사용한다. (V1의 흩어진 data-key 들을 한곳에 모음)
  */
 export const KEY = {
-  /** A4 페이지 컨테이너 */
+  /** 페이지 컨테이너 */
   PAGE: 'page',
   /** 헤더 */
   HEADER: 'header',

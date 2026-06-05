@@ -20,8 +20,9 @@ export type MeasurerConfig = {
   showDividers?: boolean;
   columnClassName?: string;
   chunkSize?: number;
-  /** 페이지 폭/높이 (기본 A4) — 컬럼 측정 시 동일 크기로 렌더 */
-  pageWidth?: number;
+  /** 컨테이너 폭(px) — 이 폭으로 오프스크린에서 컬럼을 측정(반응형) */
+  containerWidth?: number;
+  /** 페이지 높이(px) */
   pageHeight?: number;
 };
 
@@ -46,7 +47,7 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     showDividers,
     columnClassName,
     chunkSize = 30,
-    pageWidth,
+    containerWidth,
     pageHeight,
   } = config;
 
@@ -59,7 +60,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     const cached = columnBoxCache.get(cacheKey);
     if (cached) return cached;
 
-    const container = createOffscreenContainer();
+    // 컨테이너 폭으로 오프스크린 측정 → w-full 페이지가 그 폭을 채워 컬럼 폭이 실제와 일치
+    const container = createOffscreenContainer({ width: containerWidth });
     await waitForFonts();
     try {
       const root = createRoot(container);
@@ -73,7 +75,6 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
             footer: renderFooter?.(pageIndex),
             showDividers,
             columnClassName,
-            pageWidth,
             pageHeight,
           }),
         ],
