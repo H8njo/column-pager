@@ -137,3 +137,32 @@ export const TallItemSlicing: Story = {
     </ColumnPager>
   ),
 };
+
+/**
+ * PageBreak 의 changeColumnCountTo 로 페이지마다 컬럼 수를 바꾼다.
+ * 1컬럼 페이지 → 2컬럼 페이지 → 3컬럼 페이지.
+ */
+export const DynamicColumnCount: Story = {
+  name: 'PageBreak 컬럼 수 변경',
+  args: { columnCount: 1, pageDirection: 'vertical', showDividers: true },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageDirection={args.pageDirection}
+      showDividers={args.showDividers}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {/* 1컬럼 */}
+      {renderCards(CARDS.slice(0, 3))}
+
+      <ColumnPager.PageBreak changeColumnCountTo={2} />
+      {/* 2컬럼 */}
+      {renderCards(CARDS.slice(3, 15))}
+
+      <ColumnPager.PageBreak changeColumnCountTo={3} />
+      {/* 3컬럼 */}
+      {renderCards(CARDS.slice(15, 33))}
+    </ColumnPager>
+  ),
+};
