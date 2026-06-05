@@ -422,3 +422,53 @@ export const PageSizing: StoryObj<SizingArgs> = {
     </div>
   ),
 };
+
+// 첫 페이지용(키 큰 커버), 홀수 페이지용, 짝수 페이지용 — 높이를 다 다르게.
+const CoverHeader = () => (
+  <div className="flex h-[160px] flex-col items-center justify-center gap-1 border-blue-500 border-b-2 bg-blue-50">
+    <span className="font-bold text-2xl text-blue-700">표지 헤더 (첫 페이지)</span>
+    <span className="text-blue-500 text-sm">키 큰 커버 → 첫 페이지는 컬럼이 짧음</span>
+  </div>
+);
+
+const OddHeader = ({ pageNumber }: { pageNumber: number }) => (
+  <div className="flex h-[64px] items-center justify-between border-emerald-400 border-b bg-emerald-50 px-4">
+    <span className="font-medium text-emerald-700 text-sm">홀수 페이지 헤더</span>
+    <span className="text-emerald-500 text-xs">p.{pageNumber}</span>
+  </div>
+);
+
+const EvenHeader = ({ pageNumber }: { pageNumber: number }) => (
+  <div className="flex h-[32px] items-center justify-between border-gray-300 border-b bg-gray-50 px-4">
+    <span className="text-gray-600 text-xs">짝수 페이지 헤더</span>
+    <span className="text-gray-400 text-xs">p.{pageNumber}</span>
+  </div>
+);
+
+/**
+ * 페이지별 헤더 3종: 첫 페이지(키 큰 커버) / 홀수 페이지 / 짝수 페이지 — 높이가 전부 다름.
+ * header에서 pageNumber로 분기만 하면 됨. 각 페이지의 컬럼 높이가 그 페이지 헤더 높이로
+ * 측정되어, 헤더가 큰 페이지는 아이템이 적게 들어간다(자동 반영).
+ */
+export const PerPageHeaders: Story = {
+  name: '첫/홀수/짝수 페이지 헤더',
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageDirection={args.pageDirection}
+      showDividers={args.showDividers}
+      header={({ pageNumber }) => {
+        if (pageNumber === 1) return <CoverHeader />;
+        return pageNumber % 2 === 1 ? (
+          <OddHeader pageNumber={pageNumber} />
+        ) : (
+          <EvenHeader pageNumber={pageNumber} />
+        );
+      }}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {renderCards(CARDS.slice(0, 40))}
+    </ColumnPager>
+  ),
+};
