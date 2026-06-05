@@ -269,15 +269,31 @@ export const AsyncStableGate: Story = {
 };
 
 /**
- * PDF 출력 미리보기 — onPagesGenerated의 htmlString을 iframe에 그려 실제 결과물을 본다.
- * ColumnPager는 hidden으로 측정용만, 좌측 iframe이 최종 HTML.
+ * 소비자 측 문서 변환 예시 — 라이브러리는 렌더된 outerHTML만 내보내고(onPagesGenerated),
+ * 이를 완전한 HTML 문서로 감싸는 건 사용처에서 한다. 여기선 현재 문서의 스타일시트를
+ * 인라인해 iframe에 미리보기로 그린다. (PDF 변환도 동일하게 소비자에서)
  */
+const wrapAsDocument = (bodyHtml: string): string => {
+  const styles = Array.from(document.styleSheets)
+    .map((sheet) => {
+      try {
+        return Array.from(sheet.cssRules)
+          .map((r) => r.cssText)
+          .join('\n');
+      } catch {
+        return '';
+      }
+    })
+    .join('\n');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>${bodyHtml}</body></html>`;
+};
+
 const PdfPreviewDemo = () => {
   const [html, setHtml] = useState('');
   return (
     <>
       <iframe
-        title="PDF preview"
+        title="document preview"
         srcDoc={html}
         className="h-[80vh] w-[420px] border border-gray-400 bg-white"
       />
@@ -287,7 +303,8 @@ const PdfPreviewDemo = () => {
         showDividers
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
-        onPagesGenerated={(_pages, htmlString) => setHtml(htmlString)}
+        // 라이브러리는 outerHTML만 줌 → 소비자가 문서로 감싸 미리보기
+        onPagesGenerated={(_pages, renderedHtml) => setHtml(wrapAsDocument(renderedHtml))}
       >
         {renderCards(CARDS.slice(0, 12))}
       </ColumnPager>
@@ -296,7 +313,7 @@ const PdfPreviewDemo = () => {
 };
 
 export const PdfPreview: Story = {
-  name: 'PDF 출력 미리보기 (iframe)',
+  name: '소비자 측 문서 변환 (iframe 미리보기)',
   render: () => <PdfPreviewDemo />,
 };
 

@@ -1,8 +1,4 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  convertElementToHtmlString,
-  type HtmlDocumentOptions,
-} from '../../lib/pdf/convertElementToHtmlString';
 import Container from './components/Container';
 import ItemCell from './components/ItemCell';
 import { STABLE_ATTR, stableSelector } from './components/keys';
@@ -47,16 +43,14 @@ export type ColumnPagerProps = {
   header?: (info: PageInfo) => ReactNode;
   /** 페이지 푸터 렌더 */
   footer?: (info: PageInfo) => ReactNode;
-  /** 페이지 생성 완료 콜백 (pages, htmlString) */
-  onPagesGenerated?: (pages: PageData[], htmlString: string) => void;
+  /** 페이지 생성 완료 콜백. html은 렌더된 컨테이너의 outerHTML(문서 변환은 소비자 몫). */
+  onPagesGenerated?: (pages: PageData[], html: string) => void;
   /** stable 폴링 타임아웃 (ms). 초과 시 onStableTimeout 후 강제 emit. 기본 5000. */
   stableTimeoutMs?: number;
   /** stable 타임아웃 발생 시 콜백 */
   onStableTimeout?: () => void;
   /** 페이지네이션(측정/계산) 실패 콜백 */
   onError?: (error: unknown) => void;
-  /** HTML 문서 옵션 (폰트/페이지/기본 스타일 커스터마이즈) */
-  htmlOptions?: HtmlDocumentOptions;
 };
 
 /** 컨테이너 내 모든 StableGate가 stable 인지 */
@@ -94,7 +88,6 @@ const ColumnPager = ({
   stableTimeoutMs = 5000,
   onStableTimeout,
   onError,
-  htmlOptions,
 }: ColumnPagerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -208,10 +201,10 @@ const ColumnPager = ({
     );
   });
 
-  // ---- HTML emit: stable 폴링 + 타임아웃 (결정 #4) ----
+  // ---- emit: stable 폴링 + 타임아웃 (결정 #4) ----
+  // 라이브러리는 "렌더된 내용(outerHTML)"만 내보낸다. PDF용 문서 변환(폰트/@page/
+  // 스타일시트 인라인)은 소비자 몫.
   const lastEmitted = useRef<PageData[] | null>(null);
-  const htmlOptionsRef = useRef(htmlOptions);
-  htmlOptionsRef.current = htmlOptions;
 
   useEffect(() => {
     if (loading || pages.length === 0) {
@@ -227,8 +220,7 @@ const ColumnPager = ({
     const startedAt = Date.now();
 
     const emit = () => {
-      const htmlString = convertElementToHtmlString(container.outerHTML, htmlOptionsRef.current);
-      onPagesGeneratedRef.current?.(pages, htmlString);
+      onPagesGeneratedRef.current?.(pages, container.outerHTML);
       lastEmitted.current = pages;
     };
 
