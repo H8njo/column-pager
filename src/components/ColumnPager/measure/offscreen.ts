@@ -5,6 +5,9 @@ import type { Root } from 'react-dom/client';
 /** idle 콜백 기본 타임아웃 (ms) */
 const IDLE_TIMEOUT = 1000;
 
+/** 폰트 로딩 대기 상한 (ms) — 웹폰트가 끝내 안 풀려도 측정이 영영 멈추지 않게 한다 */
+const FONTS_READY_TIMEOUT = 3000;
+
 // ============================================================================
 // 스케줄링 (메인 스레드 블로킹 최소화 — V1 이식)
 // ============================================================================
@@ -19,16 +22,15 @@ export const waitForIdle = (timeout = IDLE_TIMEOUT): Promise<void> =>
     }
   });
 
-/** 다음 프레임까지 대기 (1: React 렌더 완료, 2: 브라우저 레이아웃 완료) */
-export const waitForNextFrame = (): Promise<void> =>
-  new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
-
-/** 폰트 로딩 완료 대기 */
+/** 폰트 로딩 완료 대기 (상한 타임아웃 포함) */
 export const waitForFonts = async (): Promise<void> => {
   if (typeof document !== 'undefined' && document.fonts) {
-    await document.fonts.ready;
+    // document.fonts.ready가 영영 resolve되지 않는 경우(폰트 네트워크 스톨 등)에도
+    // 측정이 무한 대기하지 않도록 타임아웃과 race한다.
+    await Promise.race([
+      document.fonts.ready,
+      new Promise<void>((resolve) => setTimeout(resolve, FONTS_READY_TIMEOUT)),
+    ]);
   }
 };
 

@@ -38,8 +38,8 @@ export default defineConfig({
       fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
     },
     rollupOptions: {
-      // react 생태계만 외부화(peerDependencies). 나머지 유틸(lodash-es/clsx/
-      // tailwind-merge)은 번들에 포함해 ESM/CJS 양쪽에서 동작하고 런타임 의존성을 없앤다.
+      // react 생태계만 외부화(peerDependencies). 나머지 유틸(clsx/tailwind-merge)은
+      // 번들에 포함해 ESM/CJS 양쪽에서 동작하고 런타임 의존성을 없앤다.
       external: ['react', 'react-dom', 'react/jsx-runtime', 'react-dom/client'],
       output: {
         globals: {

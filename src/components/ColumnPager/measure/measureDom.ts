@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import ItemCell from '../components/ItemCell';
 import { KEY, keySelector } from '../components/keys';
 import Page from '../components/Page';
@@ -56,8 +56,10 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
   // 아이템 측정 캐시: key = `${columnWidth}|${콘텐츠 시그니처}`.
   // 안 바뀐 카드는 재측정하지 않고 캐시 재사용 → 한 카드만 편집하면 그 카드만 측정.
   const itemMeasureCache = new Map<string, ItemMeasure>();
+  // toBlocks가 미리 계산한 block.signature를 재사용(트리 재순회 회피). 직접 만든
+  // ContentBlock(테스트 등 signature 없는 경우)은 노드에서 즉석 계산으로 폴백.
   const itemKey = (block: ContentBlock, columnWidth: number): string =>
-    `${columnWidth}|${blocksSignature(block.node)}`;
+    `${columnWidth}|${block.signature ?? blocksSignature(block.node)}`;
 
   /** 빈 Page를 렌더해 한 컬럼 박스 크기 측정 (캐시) */
   const measureColumnBox = async (pageIndex: number, columnCount: number): Promise<Size> => {
@@ -68,8 +70,9 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     // 컨테이너 폭으로 오프스크린 측정 → w-full 페이지가 그 폭을 채워 컬럼 폭이 실제와 일치
     const container = createOffscreenContainer({ width: containerWidth });
     await waitForFonts();
+    let root: Root | undefined;
     try {
-      const root = createRoot(container);
+      root = createRoot(container);
       renderElements(
         root,
         [
@@ -88,10 +91,13 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
       // flushSync로 동기 커밋됨 → getBoundingClientRect가 강제 레이아웃을 일으켜 즉시 정확.
       const column = container.querySelector(keySelector(KEY.COLUMN));
       const size = rectSize(column);
-      root.unmount();
       columnBoxCache.set(cacheKey, size);
       return size;
     } finally {
+      // 측정 중 throw가 나도 root를 정리해 React 루트/파이버 누수를 막는다.
+      try {
+        root?.unmount();
+      } catch {}
       removeContainer(container);
     }
   };
@@ -105,14 +111,17 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
 
     const container = createOffscreenContainer({ width: columnWidth });
     await waitForFonts();
+    let root: Root | undefined;
     try {
-      const root = createRoot(container);
+      root = createRoot(container);
       renderElements(root, [template], 'decorator');
       const height = (container.firstElementChild?.getBoundingClientRect().height ?? 0) as number;
-      root.unmount();
       decoratorHeightCache.set(template, height);
       return height;
     } finally {
+      try {
+        root?.unmount();
+      } catch {}
       removeContainer(container);
     }
   };
@@ -146,32 +155,37 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'display: contents;';
             container.appendChild(wrapper);
-            const root = createRoot(wrapper);
+            let root: Root | undefined;
 
-            renderElements(
-              root,
-              group.map(({ block }) =>
-                createElement(
-                  ItemCell,
-                  { decoratorClassName: block.decoratorClassName },
-                  block.node,
+            try {
+              root = createRoot(wrapper);
+              renderElements(
+                root,
+                group.map(({ block }) =>
+                  createElement(
+                    ItemCell,
+                    { decoratorClassName: block.decoratorClassName },
+                    block.node,
+                  ),
                 ),
-              ),
-              `measure-${g}`,
-            );
-            // flushSync 동기 커밋 → getBoundingClientRect 강제 레이아웃으로 즉시 측정.
-            const cells = Array.from(wrapper.children);
-            group.forEach(({ key }, idx) => {
-              const cell = cells[idx];
-              itemMeasureCache.set(key, {
-                container: rectSize(cell),
-                sliceWidth: rectSize(cell?.querySelector(keySelector(KEY.CELL_INNER)) ?? null)
-                  .width,
+                `measure-${g}`,
+              );
+              // flushSync 동기 커밋 → getBoundingClientRect 강제 레이아웃으로 즉시 측정.
+              const cells = Array.from(wrapper.children);
+              group.forEach(({ key }, idx) => {
+                const cell = cells[idx];
+                itemMeasureCache.set(key, {
+                  container: rectSize(cell),
+                  sliceWidth: rectSize(cell?.querySelector(keySelector(KEY.CELL_INNER)) ?? null)
+                    .width,
+                });
               });
-            });
-
-            root.unmount();
-            container.removeChild(wrapper);
+            } finally {
+              try {
+                root?.unmount();
+              } catch {}
+              container.removeChild(wrapper);
+            }
           }
         } finally {
           removeContainer(container);
@@ -211,11 +225,12 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
       });
       await waitForFonts();
 
+      let root: Root | undefined;
       try {
         const wrapper = document.createElement('div');
         wrapper.style.cssText = 'display: contents;';
         container.appendChild(wrapper);
-        const root = createRoot(wrapper);
+        root = createRoot(wrapper);
 
         // V1 measureElementSize 구조 재현: CELL/INNER height 100%, 앞에 carry 스페이서
         const tree = createElement(
@@ -250,12 +265,12 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
             thresholdEl.getBoundingClientRect().top - innerEl.getBoundingClientRect().top;
         }
 
-        root.unmount();
-        container.removeChild(wrapper);
-
         const result: OverflowMeasure = { flowWidth, sliceWidth, contentEnd };
         return result;
       } finally {
+        try {
+          root?.unmount();
+        } catch {}
         removeContainer(container);
       }
     },
