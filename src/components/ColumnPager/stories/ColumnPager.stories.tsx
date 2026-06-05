@@ -379,3 +379,46 @@ export const EditableContent: Story = {
   name: '데이터 편집 → 즉시 반영',
   render: () => <EditableDemo />,
 };
+
+/**
+ * 넓이/높이 설정.
+ * - 높이: `pageHeight` prop으로 직접 지정 (슬라이더).
+ * - 넓이: prop이 아니라 컨테이너 폭에 반응 — 래퍼 폭을 슬라이더로 바꾸면
+ *   ResizeObserver가 감지(디바운스) 후 재페이지네이션.
+ */
+type SizingArgs = {
+  width: number;
+  pageHeight: number;
+  columnCount: number;
+  showDividers: boolean;
+};
+
+export const PageSizing: StoryObj<SizingArgs> = {
+  name: '넓이 / 높이 설정',
+  args: { width: 794, pageHeight: 1123, columnCount: 2, showDividers: true },
+  argTypes: {
+    width: {
+      control: { type: 'range', min: 360, max: 1200, step: 10 },
+      description: '컨테이너 폭(px)',
+    },
+    pageHeight: {
+      control: { type: 'range', min: 480, max: 1400, step: 20 },
+      description: '페이지 높이(px)',
+    },
+    columnCount: { control: { type: 'number', min: 1, max: 4 } },
+    showDividers: { control: 'boolean' },
+  },
+  render: (args) => (
+    <div style={{ width: args.width }}>
+      <ColumnPager
+        columnCount={args.columnCount}
+        pageHeight={args.pageHeight}
+        showDividers={args.showDividers}
+        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+      >
+        {renderCards(CARDS.slice(0, 24))}
+      </ColumnPager>
+    </div>
+  ),
+};
