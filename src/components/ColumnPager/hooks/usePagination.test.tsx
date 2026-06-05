@@ -47,6 +47,26 @@ describe('usePagination', () => {
     expect(calls()).toBe(1); // 재계산 없음
   });
 
+  it('options 식별자만 바뀌면 재계산하지 않는다 (무한 루프 방지 가드)', async () => {
+    const { measurer, calls } = makeFake();
+    const { result, rerender } = renderHook(
+      (props: { options: object }) =>
+        usePagination({
+          children: kids('a', 'b'),
+          columnCount: 1,
+          measurer,
+          options: props.options,
+        }),
+      { initialProps: { options: {} } },
+    );
+    await waitFor(() => expect(result.current.pages.length).toBe(1));
+    expect(calls()).toBe(1);
+
+    rerender({ options: {} }); // 새 객체, 내용 동일 → 재계산 없어야
+    await Promise.resolve();
+    expect(calls()).toBe(1);
+  });
+
   it('내용이 바뀌면 길이가 같아도 재계산한다 (V1 버그 수정)', async () => {
     const { measurer, calls } = makeFake();
     const { result, rerender } = renderHook(

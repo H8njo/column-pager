@@ -98,6 +98,18 @@ const ColumnPager = ({
 }: ColumnPagerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 콜백/렌더 함수의 "식별자 변화"가 재계산/재emit을 유발하지 않도록 ref로 분리한다.
+  // (소비자가 header/footer/onPagesGenerated를 인라인 함수로 넘기는 흔한 패턴에서
+  //  measurer가 매 렌더 재생성 → 무한 재페이지네이션 루프가 되는 것을 방지)
+  const headerRef = useRef(header);
+  headerRef.current = header;
+  const footerRef = useRef(footer);
+  footerRef.current = footer;
+  const onPagesGeneratedRef = useRef(onPagesGenerated);
+  onPagesGeneratedRef.current = onPagesGenerated;
+  const onStableTimeoutRef = useRef(onStableTimeout);
+  onStableTimeoutRef.current = onStableTimeout;
+
   // 컨테이너 폭을 측정(반응형). 리사이즈는 디바운스 후 반영 → 재페이지네이션.
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -119,16 +131,26 @@ const ColumnPager = ({
     };
   }, [resizeDebounceMs]);
 
+  // 측정 차원에 실제 영향을 주는 입력만 deps에 둔다. header/footer는 "존재 여부"만
+  // 보고(높이 0 여부), 내용은 ref로 최신값을 읽어 측정 → 함수 식별자 변화로 measurer가
+  // 재생성되지 않는다(루프 방지). header/footer 높이가 동적으로 바뀌는 드문 경우는
+  // 폭/높이/columnCount 변경이나 콘텐츠 변경 시 함께 반영된다.
+  const hasHeader = !!header;
+  const hasFooter = !!footer;
   const measurerConfig: MeasurerConfig = useMemo(
     () => ({
-      renderHeader: header ? (pageIndex) => header({ pageNumber: pageIndex + 1 }) : undefined,
-      renderFooter: footer ? (pageIndex) => footer({ pageNumber: pageIndex + 1 }) : undefined,
+      renderHeader: hasHeader
+        ? (pageIndex: number) => headerRef.current?.({ pageNumber: pageIndex + 1 })
+        : undefined,
+      renderFooter: hasFooter
+        ? (pageIndex: number) => footerRef.current?.({ pageNumber: pageIndex + 1 })
+        : undefined,
       showDividers,
       columnClassName,
       containerWidth,
       pageHeight,
     }),
-    [header, footer, showDividers, columnClassName, containerWidth, pageHeight],
+    [hasHeader, hasFooter, showDividers, columnClassName, containerWidth, pageHeight],
   );
 
   // measurer는 config(컨테이너 폭 포함)가 바뀔 때만 새로 생성 → 캐시 유지 + 폭 변경 시 재페이지네이션.
@@ -198,7 +220,7 @@ const ColumnPager = ({
     }
     if (lastEmitted.current === pages) return;
     const container = containerRef.current;
-    if (!container || !onPagesGenerated) return;
+    if (!container || !onPagesGeneratedRef.current) return;
 
     let rafId: number | null = null;
     let timedOut = false;
@@ -206,7 +228,7 @@ const ColumnPager = ({
 
     const emit = () => {
       const htmlString = convertElementToHtmlString(container.outerHTML, htmlOptionsRef.current);
-      onPagesGenerated(pages, htmlString);
+      onPagesGeneratedRef.current?.(pages, htmlString);
       lastEmitted.current = pages;
     };
 
@@ -221,7 +243,7 @@ const ColumnPager = ({
       if (timedOut) return;
       if (Date.now() - startedAt > stableTimeoutMs) {
         timedOut = true;
-        onStableTimeout?.();
+        onStableTimeoutRef.current?.();
         emit(); // 무한 미생성 방지: 타임아웃 시 강제 emit
         return;
       }
@@ -248,7 +270,8 @@ const ColumnPager = ({
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [pages, loading, onPagesGenerated, stableTimeoutMs, onStableTimeout]);
+    // 콜백은 ref로 최신값을 읽으므로 deps에서 제외 — 인라인 콜백 식별자 변화로 재emit하지 않음
+  }, [pages, loading, stableTimeoutMs]);
 
   // 컨테이너는 항상 렌더 — ResizeObserver가 폭을 측정해야 첫 페이지네이션이 시작된다.
   return (
