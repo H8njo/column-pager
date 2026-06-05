@@ -39,18 +39,62 @@ const wrapIfColumnFull = (cursor: Cursor): void => {
 };
 
 /**
- * 정규화된 블록 스트림을 배치 결과(Placement[])로 변환한다.
+ * 콘텐츠 블록들의 자연 크기를 측정한다 (pageCount와 무관 — 1회만).
  *
- * 순수 로직 + 주입된 measurer(측정 포트). measurer를 fake로 주입하면
- * DOM 없이 결정적으로 유닛테스트 가능하다.
+ * 각 블록의 columnCount는 앞선 PageBreak(changeColumnCountTo)로 정적으로 정해지므로,
+ * columnCount별로 묶어 해당 폭에서 측정한다. 결과는 contentBlocks 순서로 정렬된
+ * ItemMeasure[]. 수렴 재-pass(placeBlocks)는 이 결과를 재사용해 카드를 다시 재지 않는다.
  */
-export const paginate = async (
+export const measureBlocks = async (
   blocks: Block[],
   initialColumnCount: number,
   measurer: Measurer,
+): Promise<ItemMeasure[]> => {
+  const contentBlocks = contentBlocksOf(blocks);
+
+  // 각 콘텐츠 블록이 속한 columnCount (앞선 PageBreak로 결정)
+  let cc = initialColumnCount;
+  const countPerContent: number[] = [];
+  for (const block of blocks) {
+    if (block.kind === 'pageBreak' && block.columnCount) cc = block.columnCount;
+    else if (block.kind === 'content') countPerContent.push(cc);
+  }
+
+  // columnCount별로 인덱스를 묶어 한 번에 측정
+  const indicesByCount = new Map<number, number[]>();
+  countPerContent.forEach((count, index) => {
+    const list = indicesByCount.get(count) ?? [];
+    list.push(index);
+    indicesByCount.set(count, list);
+  });
+
+  const measures: ItemMeasure[] = new Array(contentBlocks.length);
+  for (const [count, indices] of indicesByCount) {
+    const width = await measurer.columnWidth(count);
+    const group = indices.map((i) => contentBlocks[i]);
+    const groupMeasures = await measurer.measureItems(group, width);
+    indices.forEach((i, k) => {
+      measures[i] = groupMeasures[k];
+    });
+  }
+
+  return measures;
+};
+
+/**
+ * 미리 측정된 블록을 배치 결과(Placement[])로 변환한다 (순수 배치 — 카드 재측정 없음).
+ *
+ * 측정이 분리돼 있어, 수렴 루프가 pageCount만 바꿔 이 함수를 여러 번 호출해도
+ * 카드는 다시 재지 않는다(컬럼 높이/오버플로우 측정만 발생, 캐시됨).
+ */
+export const placeBlocks = async (
+  blocks: Block[],
+  initialColumnCount: number,
+  measures: ItemMeasure[],
+  measurer: Measurer,
   options: PaginateOptions = {},
 ): Promise<Placement[]> => {
-  const { moveOversizedItemToNextColumn = false } = options;
+  const { moveOversizedItemToNextColumn = false, pageCount = 0 } = options;
   const contentBlocks = contentBlocksOf(blocks);
 
   const cursor: Cursor = {
@@ -59,9 +103,6 @@ export const paginate = async (
     filledHeight: 0,
     columnCount: initialColumnCount,
   };
-
-  let columnWidth = await measurer.columnWidth(cursor.columnCount);
-  let measures: ItemMeasure[] = await measurer.measureItems(contentBlocks, columnWidth);
 
   const placements: Placement[] = [];
   let section: string | undefined;
@@ -75,16 +116,7 @@ export const paginate = async (
 
     if (block.kind === 'pageBreak') {
       advancePage(cursor);
-      if (block.columnCount && block.columnCount !== cursor.columnCount) {
-        cursor.columnCount = block.columnCount;
-        // 남은 콘텐츠 블록을 새 컬럼 폭으로 재측정 (V1 동작 이식)
-        columnWidth = await measurer.columnWidth(cursor.columnCount);
-        const remaining = await measurer.measureItems(
-          contentBlocks.slice(contentIndex),
-          columnWidth,
-        );
-        measures = [...measures.slice(0, contentIndex), ...remaining];
-      }
+      if (block.columnCount) cursor.columnCount = block.columnCount; // 측정은 이미 반영됨
       continue;
     }
 
@@ -98,7 +130,11 @@ export const paginate = async (
     const blockIndex = contentIndex;
     contentIndex += 1;
 
-    const columnHeight = await measurer.columnHeight(cursor.pageIndex, cursor.columnCount);
+    const columnHeight = await measurer.columnHeight(
+      cursor.pageIndex,
+      cursor.columnCount,
+      pageCount,
+    );
     const itemHeight = measure.container.height;
 
     // 가드: 컬럼 높이 측정 실패(<=0) 시 슬라이싱하면 퇴화/과도 분할 → 그냥 현재 위치에 배치
@@ -141,7 +177,7 @@ export const paginate = async (
 
         const pageHeight = isFirst
           ? columnHeight
-          : await measurer.columnHeight(cursor.pageIndex, cursor.columnCount);
+          : await measurer.columnHeight(cursor.pageIndex, cursor.columnCount, pageCount);
         const clipHeight = isFirst
           ? firstClip
           : isLast
@@ -190,6 +226,20 @@ export const paginate = async (
   }
 
   return placements;
+};
+
+/**
+ * 측정 + 배치를 한 번에 (단일 pass). 측정은 measureBlocks, 배치는 placeBlocks.
+ * 여러 pageCount로 수렴시키려면 measureBlocks를 한 번 호출하고 placeBlocks를 반복하라.
+ */
+export const paginate = async (
+  blocks: Block[],
+  initialColumnCount: number,
+  measurer: Measurer,
+  options: PaginateOptions = {},
+): Promise<Placement[]> => {
+  const measures = await measureBlocks(blocks, initialColumnCount, measurer);
+  return placeBlocks(blocks, initialColumnCount, measures, measurer, options);
 };
 
 /** Placement[] → Page[] (3D 구조). 페이지·컬럼 인덱스로 그룹화. */

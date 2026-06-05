@@ -15,8 +15,8 @@ import {
 
 /** 측정기 설정 (React 계층에서 주입) */
 export type MeasurerConfig = {
-  renderHeader?: (pageIndex: number) => ReactNode;
-  renderFooter?: (pageIndex: number) => ReactNode;
+  renderHeader?: (pageIndex: number, pageCount: number) => ReactNode;
+  renderFooter?: (pageIndex: number, pageCount: number) => ReactNode;
   showDividers?: boolean;
   columnClassName?: string;
   chunkSize?: number;
@@ -60,8 +60,12 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     `${columnWidth}|${blocksSignature(block.node)}`;
 
   /** 빈 Page를 렌더해 한 컬럼 박스 크기 측정 (캐시) */
-  const measureColumnBox = async (pageIndex: number, columnCount: number): Promise<Size> => {
-    const cacheKey = `${pageIndex}-${columnCount}`;
+  const measureColumnBox = async (
+    pageIndex: number,
+    columnCount: number,
+    pageCount: number,
+  ): Promise<Size> => {
+    const cacheKey = `${pageIndex}-${columnCount}-${pageCount}`;
     const cached = columnBoxCache.get(cacheKey);
     if (cached) return cached;
 
@@ -76,8 +80,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
           createElement(Page, {
             columns: [],
             columnCount,
-            header: renderHeader?.(pageIndex),
-            footer: renderFooter?.(pageIndex),
+            header: renderHeader?.(pageIndex, pageCount),
+            footer: renderFooter?.(pageIndex, pageCount),
             showDividers,
             columnClassName,
             pageHeight,
@@ -119,11 +123,12 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
 
   return {
     async columnWidth(columnCount) {
-      return (await measureColumnBox(0, columnCount)).width;
+      // 폭은 header/footer 높이와 무관 → pageCount 0으로 측정
+      return (await measureColumnBox(0, columnCount, 0)).width;
     },
 
-    async columnHeight(pageIndex, columnCount) {
-      return (await measureColumnBox(pageIndex, columnCount)).height;
+    async columnHeight(pageIndex, columnCount, pageCount) {
+      return (await measureColumnBox(pageIndex, columnCount, pageCount)).height;
     },
 
     async measureItems(blocks, columnWidth) {
