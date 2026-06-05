@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Card from '../../ui/Card';
 import { CARDS, TALL_CARD } from '../../ui/cardData';
 import ColumnPager from '../ColumnPager';
+import { getSectionPageRanges, type SectionPageRanges } from '../core/sectionRanges';
+import type { Page } from '../core/types';
 
 /**
  * ColumnPager - PDF 페이지네이션 컴포넌트 (재설계판)
@@ -165,4 +167,153 @@ export const DynamicColumnCount: Story = {
       {renderCards(CARDS.slice(15, 33))}
     </ColumnPager>
   ),
+};
+
+/**
+ * 페이지 크기/방향 (pageSize · orientation).
+ * 컨트롤로 A4/letter/legal × portrait/landscape 조합을 바꿔본다.
+ */
+type PageSizeArgs = {
+  pageSize: 'A4' | 'letter' | 'legal';
+  orientation: 'portrait' | 'landscape';
+  columnCount: number;
+};
+
+export const PageSizeOrientation: StoryObj<PageSizeArgs> = {
+  name: '페이지 크기 / 방향',
+  args: { pageSize: 'letter', orientation: 'landscape', columnCount: 3 },
+  argTypes: {
+    pageSize: { control: 'radio', options: ['A4', 'letter', 'legal'] },
+    orientation: { control: 'radio', options: ['portrait', 'landscape'] },
+    columnCount: { control: { type: 'number', min: 1, max: 4 } },
+  },
+  render: (args) => (
+    <ColumnPager
+      pageSize={args.pageSize}
+      orientation={args.orientation}
+      columnCount={args.columnCount}
+      showDividers
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {renderCards(CARDS.slice(0, 30))}
+    </ColumnPager>
+  ),
+};
+
+/**
+ * SectionMark + getSectionPageRanges.
+ * 콘텐츠를 섹션으로 나누고, 생성 후 섹션별 페이지 범위를 화면에 표시한다.
+ */
+const SectionsDemo = () => {
+  const [ranges, setRanges] = useState<SectionPageRanges>({});
+  return (
+    <>
+      <div className="fixed top-2 left-2 z-10 rounded bg-white p-2 font-mono text-xs shadow">
+        sectionRanges: {JSON.stringify(ranges)}
+      </div>
+      <ColumnPager
+        columnCount={2}
+        showDividers
+        header={({ pageNumber, section }) => (
+          <div className="flex h-[40px] items-center justify-between border-gray-300 border-b px-4">
+            <span className="text-sm font-medium">{section ?? '-'}</span>
+            <span className="text-gray-500 text-sm">Page {pageNumber}</span>
+          </div>
+        )}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+        onPagesGenerated={(pages: Page[]) => setRanges(getSectionPageRanges(pages))}
+      >
+        <ColumnPager.SectionMark section="vocabulary" />
+        {renderCards(CARDS.slice(0, 8))}
+        <ColumnPager.SectionMark section="grammar" />
+        {renderCards(CARDS.slice(8, 16))}
+        <ColumnPager.SectionMark section="answers" />
+        {renderCards(CARDS.slice(16, 22))}
+      </ColumnPager>
+    </>
+  );
+};
+
+export const WithSections: Story = {
+  name: 'SectionMark + 섹션 범위',
+  render: () => <SectionsDemo />,
+};
+
+/**
+ * StableGate — 비동기 콘텐츠가 준비될 때까지 emit을 대기.
+ * 높이는 예약(레이아웃 고정)하고 stable 플래그만 1.2s 후 true → 그때 onPagesGenerated 발생.
+ */
+const StableGateDemo = () => {
+  const [loaded, setLoaded] = useState(false);
+  const [generated, setGenerated] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLoaded(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <>
+      <div className="fixed top-2 left-2 z-10 rounded bg-white p-2 font-mono text-xs shadow">
+        emit: {generated ? '✅ generated' : '⏳ waiting for stable…'}
+      </div>
+      <ColumnPager
+        columnCount={1}
+        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+        onPagesGenerated={() => setGenerated(true)}
+      >
+        <Card {...CARDS[0]} />
+        <div className="h-4" />
+        <ColumnPager.StableGate stable={loaded}>
+          {/* 높이 예약 → 레이아웃 안정, stable 플래그만 늦게 true */}
+          <div
+            className={`flex h-[180px] items-center justify-center rounded ${
+              loaded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+            }`}
+          >
+            {loaded ? '비동기 콘텐츠 로드 완료' : '로딩 중… (1.2s)'}
+          </div>
+        </ColumnPager.StableGate>
+        <div className="h-4" />
+        <Card {...CARDS[1]} />
+      </ColumnPager>
+    </>
+  );
+};
+
+export const AsyncStableGate: Story = {
+  name: 'StableGate (비동기 콘텐츠)',
+  render: () => <StableGateDemo />,
+};
+
+/**
+ * PDF 출력 미리보기 — onPagesGenerated의 htmlString을 iframe에 그려 실제 결과물을 본다.
+ * ColumnPager는 hidden으로 측정용만, 좌측 iframe이 최종 HTML.
+ */
+const PdfPreviewDemo = () => {
+  const [html, setHtml] = useState('');
+  return (
+    <>
+      <iframe
+        title="PDF preview"
+        srcDoc={html}
+        className="h-[80vh] w-[420px] border border-gray-400 bg-white"
+      />
+      <ColumnPager
+        hidden
+        columnCount={2}
+        showDividers
+        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+        onPagesGenerated={(_pages, htmlString) => setHtml(htmlString)}
+      >
+        {renderCards(CARDS.slice(0, 12))}
+      </ColumnPager>
+    </>
+  );
+};
+
+export const PdfPreview: Story = {
+  name: 'PDF 출력 미리보기 (iframe)',
+  render: () => <PdfPreviewDemo />,
 };
