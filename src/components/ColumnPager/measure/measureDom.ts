@@ -11,7 +11,6 @@ import {
   renderElements,
   waitForFonts,
   waitForIdle,
-  waitForNextFrame,
 } from './offscreen';
 
 /** 측정기 설정 (React 계층에서 주입) */
@@ -86,7 +85,7 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
         ],
         'layout',
       );
-      await waitForNextFrame();
+      // flushSync로 동기 커밋됨 → getBoundingClientRect가 강제 레이아웃을 일으켜 즉시 정확.
       const column = container.querySelector(keySelector(KEY.COLUMN));
       const size = rectSize(column);
       root.unmount();
@@ -109,7 +108,6 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     try {
       const root = createRoot(container);
       renderElements(root, [template], 'decorator');
-      await waitForNextFrame();
       const height = (container.firstElementChild?.getBoundingClientRect().height ?? 0) as number;
       root.unmount();
       decoratorHeightCache.set(template, height);
@@ -161,8 +159,7 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
               ),
               `measure-${g}`,
             );
-            await waitForNextFrame();
-
+            // flushSync 동기 커밋 → getBoundingClientRect 강제 레이아웃으로 즉시 측정.
             const cells = Array.from(wrapper.children);
             group.forEach(({ key }, idx) => {
               const cell = cells[idx];
@@ -175,7 +172,6 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
 
             root.unmount();
             container.removeChild(wrapper);
-            if (g < groups.length - 1) await waitForNextFrame();
           }
         } finally {
           removeContainer(container);
@@ -241,8 +237,7 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
         );
 
         renderElements(root, [tree], 'overflow');
-        await waitForNextFrame();
-
+        // flushSync 동기 커밋 → 즉시 측정.
         const innerEl = container.querySelector(keySelector(KEY.CELL_INNER));
         const contentEl = container.querySelector(keySelector(KEY.CELL_CONTENT));
         const thresholdEl = container.querySelector(keySelector(KEY.CELL_THRESHOLD));

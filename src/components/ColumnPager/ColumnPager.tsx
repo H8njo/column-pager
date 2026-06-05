@@ -210,6 +210,13 @@ const ColumnPager = ({
       lastEmitted.current = pages;
     };
 
+    // 빠른 경로: StableGate가 하나도 없으면 settle을 기다릴 이유가 없다.
+    // effect는 커밋 후 실행되어 DOM이 이미 최신이므로 즉시 emit.
+    if (container.querySelectorAll(stableSelector).length === 0) {
+      emit();
+      return;
+    }
+
     const tick = () => {
       if (timedOut) return;
       if (Date.now() - startedAt > stableTimeoutMs) {

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { type CSSProperties, memo, type ReactNode } from 'react';
 import { cn } from '../../../lib/utils';
 import { KEY } from './keys';
 
@@ -27,4 +27,5 @@ const ItemCell = ({ children, decoratorClassName, style }: ItemCellProps) => (
   </div>
 );
 
-export default ItemCell;
+// memo: node/props ref가 안정적이면(소비자가 카드 element를 메모이즈) 재렌더 생략 → 무거운 카드 보호
+export default memo(ItemCell);
