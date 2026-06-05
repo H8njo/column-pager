@@ -439,19 +439,38 @@ const OddHeader = ({ pageNumber }: { pageNumber: number }) => (
 );
 
 const EvenHeader = ({ pageNumber }: { pageNumber: number }) => (
-  <div className="flex h-[32px] items-center justify-between border-gray-300 border-b bg-gray-50 px-4">
+  <div className="flex h-[32px] items-center justify-between border-red-300 border-b bg-red-50 px-4">
     <span className="text-gray-600 text-xs">짝수 페이지 헤더</span>
     <span className="text-gray-400 text-xs">p.{pageNumber}</span>
   </div>
 );
 
+// 푸터도 커버(첫 페이지)/홀수/짝수 — 높이 다 다르게.
+const CoverFooter = () => (
+  <div className="flex h-[80px] items-center justify-center border-blue-500 border-t-2 bg-blue-50">
+    <span className="font-medium text-blue-700 text-sm">표지 푸터 (첫 페이지)</span>
+  </div>
+);
+
+const OddFooter = ({ pageNumber }: { pageNumber: number }) => (
+  <div className="flex h-[44px] items-center justify-center border-emerald-400 border-t bg-emerald-50">
+    <span className="text-emerald-600 text-xs">홀수 페이지 푸터 · p.{pageNumber}</span>
+  </div>
+);
+
+const EvenFooter = ({ pageNumber }: { pageNumber: number }) => (
+  <div className="flex h-[24px] items-center justify-center border-red-300 border-t bg-red-50">
+    <span className="text-gray-400 text-xs">짝수 페이지 푸터 · p.{pageNumber}</span>
+  </div>
+);
+
 /**
- * 페이지별 헤더 3종: 첫 페이지(키 큰 커버) / 홀수 페이지 / 짝수 페이지 — 높이가 전부 다름.
- * header에서 pageNumber로 분기만 하면 됨. 각 페이지의 컬럼 높이가 그 페이지 헤더 높이로
- * 측정되어, 헤더가 큰 페이지는 아이템이 적게 들어간다(자동 반영).
+ * 페이지별 헤더·푸터 3종: 첫 페이지(키 큰 커버) / 홀수 / 짝수 — 높이가 전부 다름.
+ * header·footer에서 pageNumber로 분기만 하면 됨. 각 페이지의 컬럼 높이가 그 페이지의
+ * 헤더+푸터 높이로 측정되어, chrome이 큰 페이지는 아이템이 적게 들어간다(자동 반영).
  */
 export const PerPageHeaders: Story = {
-  name: '첫/홀수/짝수 페이지 헤더',
+  name: '첫/홀수/짝수 헤더·푸터',
   args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
   render: (args) => (
     <ColumnPager
@@ -466,7 +485,14 @@ export const PerPageHeaders: Story = {
           <EvenHeader pageNumber={pageNumber} />
         );
       }}
-      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => {
+        if (pageNumber === 1) return <CoverFooter />;
+        return pageNumber % 2 === 1 ? (
+          <OddFooter pageNumber={pageNumber} />
+        ) : (
+          <EvenFooter pageNumber={pageNumber} />
+        );
+      }}
     >
       {renderCards(CARDS.slice(0, 40))}
     </ColumnPager>
