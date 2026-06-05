@@ -240,13 +240,21 @@ export const WithSections: Story = {
   render: () => <SectionsDemo />,
 };
 
+/** 비동기로 "불러온" 긴 콘텐츠 (로드 후 컬럼 높이를 초과 → 슬라이스되어 페이지 증가) */
+const ASYNC_PARAGRAPHS = Array.from(
+  { length: 45 },
+  (_, i) =>
+    `비동기 항목 ${i + 1}. ${'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(2)}`,
+);
+
 /**
- * StableGate — 비동기 콘텐츠가 준비될 때까지 emit을 대기.
- * 높이는 예약(레이아웃 고정)하고 stable 플래그만 1.2s 후 true → 그때 onPagesGenerated 발생.
+ * StableGate — 비동기 콘텐츠 로드 전/후로 페이지 수가 달라진다.
+ * 로딩 중엔 짧은 플레이스홀더(적은 페이지) → 로드되면 긴 콘텐츠가 들어와 여러 페이지로 늘어남.
+ * StableGate가 stable=true가 될 때까지 emit(onPagesGenerated)을 대기한다.
  */
 const StableGateDemo = () => {
   const [loaded, setLoaded] = useState(false);
-  const [generated, setGenerated] = useState(false);
+  const [pageCount, setPageCount] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 1200);
     return () => clearTimeout(t);
@@ -254,25 +262,31 @@ const StableGateDemo = () => {
   return (
     <>
       <div className="fixed top-2 left-2 z-10 rounded bg-white p-2 font-mono text-xs shadow">
-        emit: {generated ? '✅ generated' : '⏳ waiting for stable…'}
+        {loaded ? `✅ 로드 완료 · 총 ${pageCount} 페이지` : '⏳ 로딩 중… (1.2s)'}
       </div>
       <ColumnPager
         columnCount={1}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
-        onPagesGenerated={() => setGenerated(true)}
+        onPagesGenerated={(pages) => setPageCount(pages.length)}
       >
         <Card {...CARDS[0]} />
         <div className="h-4" />
         <ColumnPager.StableGate stable={loaded}>
-          {/* 높이 예약 → 레이아웃 안정, stable 플래그만 늦게 true */}
-          <div
-            className={`flex h-[180px] items-center justify-center rounded ${
-              loaded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-            }`}
-          >
-            {loaded ? '비동기 콘텐츠 로드 완료' : '로딩 중… (1.2s)'}
-          </div>
+          {loaded ? (
+            <div className="space-y-2">
+              {ASYNC_PARAGRAPHS.map((text, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 고정 길이 데모 문단
+                <p key={i} className="text-sm leading-relaxed text-gray-600">
+                  {text}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-[100px] items-center justify-center rounded bg-amber-100 text-amber-700">
+              로딩 중…
+            </div>
+          )}
         </ColumnPager.StableGate>
         <div className="h-4" />
         <Card {...CARDS[1]} />
