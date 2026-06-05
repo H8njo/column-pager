@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { contentBlocksOf, toBlocks } from '../core/blocks';
+import { contentBlocksOf, streamSignature, toBlocks } from '../core/blocks';
 import { groupIntoPages, paginate } from '../core/paginate';
-import { blocksSignature } from '../core/signature';
 import type { ContentBlock, Measurer, Page, PaginateOptions } from '../core/types';
 
 type UsePaginationArgs = {
@@ -40,15 +39,17 @@ const usePagination = ({
   paused,
   onError,
 }: UsePaginationArgs): UsePaginationResult => {
-  // signature: 재페이지네이션 트리거(구조 변화 감지)
-  const signature = useMemo(() => blocksSignature(children), [children]);
+  // blocks/contentBlocks: 렌더용 — 최신 children 노드를 반영해야 한다.
+  // (signature가 같아도 비구조적 prop 변경 — 예: StableGate의 stable — 이 화면에 반영되도록)
+  // toBlocks가 블록별 signature를 함께 계산하므로 트리는 여기서 한 번만 순회한다.
+  const blocks = useMemo(() => toBlocks(children), [children]);
+  const contentBlocks = useMemo(() => contentBlocksOf(blocks), [blocks]);
+  // signature: 재페이지네이션 트리거(구조 변화 감지). 블록별 signature를 합성 →
+  // children 트리를 다시 통째로 순회하지 않는다.
+  const signature = useMemo(() => streamSignature(blocks), [blocks]);
   // options(예: moveOversizedItemToNextColumn)도 배치 결과를 바꾸므로 트리거에 포함.
   // 매 렌더 새 객체로 와도 직렬화 키는 내용이 같으면 안정적 → 토글 시에만 재계산.
   const optionsKey = useMemo(() => JSON.stringify(options ?? {}), [options]);
-  // blocks/contentBlocks: 렌더용 — 최신 children 노드를 반영해야 한다.
-  // (signature가 같아도 비구조적 prop 변경 — 예: StableGate의 stable — 이 화면에 반영되도록)
-  const blocks = useMemo(() => toBlocks(children), [children]);
-  const contentBlocks = useMemo(() => contentBlocksOf(blocks), [blocks]);
 
   const [pages, setPages] = useState<Page[]>([]);
   const runIdRef = useRef(0);

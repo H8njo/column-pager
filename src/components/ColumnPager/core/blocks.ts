@@ -6,6 +6,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { blocksSignature } from './signature';
 import type { Block, ContentBlock } from './types';
 
 /**
@@ -38,6 +39,9 @@ const controlKindOf = (type: unknown): ControlKind | undefined => {
 const content = (node: ReactNode, extra: Partial<ContentBlock> = {}): ContentBlock => ({
   kind: 'content',
   node,
+  // 블록 생성 시 노드 시그니처를 1회 계산해 부착 → 측정 캐시 키/재계산 트리거에서 재사용
+  // (measureItems마다, 그리고 usePagination 렌더마다 다시 트리를 순회하던 비용 제거).
+  signature: blocksSignature(node),
   ...extra,
 });
 
@@ -120,3 +124,18 @@ export const toBlocks = (children: ReactNode): Block[] => {
 /** 콘텐츠 블록만 추출 (측정/렌더 노드 조회용 인덱스 기준) */
 export const contentBlocksOf = (blocks: Block[]): ContentBlock[] =>
   blocks.filter((b): b is ContentBlock => b.kind === 'content');
+
+/**
+ * 정규화된 블록 스트림의 재페이지네이션 시그니처.
+ * 각 블록은 이미 계산된 per-block signature(+decorator 클래스)와 컨트롤 정보를 쓰므로
+ * 트리를 다시 순회하지 않는다(blocksSignature(children) 전체 재순회 대체).
+ */
+export const streamSignature = (blocks: Block[]): string =>
+  blocks
+    .map((b) => {
+      if (b.kind === 'content') return `c:${b.signature ?? ''}:${b.decoratorClassName ?? ''}`;
+      if (b.kind === 'pageBreak') return `pb:${b.columnCount ?? ''}`;
+      if (b.kind === 'sectionMark') return `sm:${b.section}`;
+      return 'cb';
+    })
+    .join('|');

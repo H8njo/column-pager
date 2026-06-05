@@ -15,6 +15,11 @@ export type ContentBlock = {
   decoratorClassName?: string;
   /** 빈 decorator 템플릿 — chrome 높이 측정용 (measure 계층에서 사용) */
   decoratorTemplate?: ReactElement;
+  /**
+   * 이 블록 노드의 콘텐츠 시그니처 (toBlocks에서 1회 계산해 부착).
+   * 측정 캐시 키 + 재페이지네이션 트리거에 재사용해 트리 중복 순회를 막는다.
+   */
+  signature?: string;
 };
 
 /** 강제 페이지 넘김 (+선택적 columnCount 변경) */
