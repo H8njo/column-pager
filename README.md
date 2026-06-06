@@ -144,6 +144,26 @@ pnpm test:run      # 유닛 테스트
 pnpm build         # 라이브러리 번들 (ESM + CJS + d.ts)
 ```
 
+## 릴리즈 (자동)
+
+`main`에 머지되면 [semantic-release](https://semantic-release.gitbook.io/)가 커밋 메시지
+([Conventional Commits](https://www.conventionalcommits.org/))를 읽어 자동으로 버전을 정하고,
+CHANGELOG·git 태그·GitHub 릴리즈·npm publish까지 처리한다.
+
+| 커밋 타입 | 버전 |
+|---|---|
+| `fix:` / `perf:` | patch |
+| `feat:` | minor |
+| `feat!:` 또는 본문에 `BREAKING CHANGE:` | major |
+| `docs:` / `chore:` / `refactor:` / `test:` / `ci:` | 릴리즈 없음 |
+
+준비물:
+- 저장소 **Settings → Secrets → Actions** 에 `NPM_TOKEN`(자동 게시용 npm 토큰) 등록
+- 첫 자동 릴리즈는 기본적으로 `1.0.0`으로 나간다. 0.x를 유지하려면 첫 머지 전 `main`에
+  베이스라인 태그를 만든다: `git tag v0.1.0 && git push origin v0.1.0`
+
+수동 태그를 달 필요는 없다 — 머지가 곧 배포다.
+
 ## 라이선스
 
 MIT
