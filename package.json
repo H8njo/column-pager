@@ -2,8 +2,25 @@
   "name": "column-pager",
   "version": "0.1.0",
   "type": "module",
-  "description": "React children을 A4 페이지로 자동 페이지네이션하여 PDF 렌더링용 레이아웃과 HTML을 생성하는 컴포넌트",
+  "description": "React children을 반응형 멀티컬럼 페이지로 자동 페이지네이션하는 렌더러",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/H8njo/column-pager.git"
+  },
+  "homepage": "https://github.com/H8njo/column-pager#readme",
+  "bugs": {
+    "url": "https://github.com/H8njo/column-pager/issues"
+  },
+  "keywords": [
+    "react",
+    "pagination",
+    "multi-column",
+    "columns",
+    "layout",
+    "pdf",
+    "print"
+  ],
   "sideEffects": false,
   "files": [
     "dist"
