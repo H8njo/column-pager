@@ -1,6 +1,6 @@
 {
   "name": "column-pager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "React children을 반응형 멀티컬럼 페이지로 자동 페이지네이션하는 렌더러",
   "license": "MIT",

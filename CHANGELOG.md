@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/H8njo/column-pager/compare/v1.0.0...v1.0.1) (2026-06-06)
+
+
+### Bug Fixes
+
+* add repository field required for npm provenance publish ([4935ea7](https://github.com/H8njo/column-pager/commit/4935ea714e41866bd92d5173f8590837753ec3ab))
+
 # 1.0.0 (2026-06-06)
 
 
