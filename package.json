@@ -1,6 +1,6 @@
 {
   "name": "column-pager",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "React children을 A4 페이지로 자동 페이지네이션하여 PDF 렌더링용 레이아웃과 HTML을 생성하는 컴포넌트",
   "license": "MIT",
