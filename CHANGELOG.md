@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/H8njo/column-pager/compare/v1.0.1...v1.0.2) (2026-06-06)
+
+
+### Bug Fixes
+
+* set publishConfig.access public for provenance on new package ([0d40d3e](https://github.com/H8njo/column-pager/commit/0d40d3e2babc95ff50893811d4ce5d4e1f49f07c))
+
 ## [1.0.1](https://github.com/H8njo/column-pager/compare/v1.0.0...v1.0.1) (2026-06-06)
 
 
