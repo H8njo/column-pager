@@ -16,7 +16,7 @@ import type { Block, ContentBlock } from './types';
  */
 export const CP_CONTROL = '__cpControl' as const;
 
-export type ControlKind = 'pageBreak' | 'columnBreak' | 'sectionMark';
+export type ControlKind = 'pageBreak' | 'columnBreak' | 'sectionMark' | 'decorator';
 
 /** 컨트롤 컴포넌트에 마커를 부착 (controls/ 에서 사용) */
 export const markControl = <T extends object>(component: T, kind: ControlKind): T => {
@@ -101,6 +101,11 @@ export const toBlocks = (children: ReactNode): Block[] => {
       if (kind === 'sectionMark') {
         const props = child.props as { section: string };
         blocks.push({ kind: 'sectionMark', section: props.section });
+        return;
+      }
+      if (kind === 'decorator') {
+        // ColumnPager.Decorator — 타입 마커로 인식해 프레임 그룹을 푼다.
+        pushDecorator(child);
         return;
       }
 

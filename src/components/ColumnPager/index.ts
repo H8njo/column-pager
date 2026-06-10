@@ -8,6 +8,7 @@
 export type { ColumnPagerProps, PageInfo, RenderItemInfo } from './ColumnPager';
 export { default as ColumnPager } from './ColumnPager';
 // 컨트롤 props 타입 (컴파운드 API: ColumnPager.PageBreak 등)
+export type { DecoratorProps } from './controls/Decorator';
 export type { PageBreakProps } from './controls/PageBreak';
 export type { SectionMarkProps } from './controls/SectionMark';
 export type { StableGateProps } from './controls/StableGate';
