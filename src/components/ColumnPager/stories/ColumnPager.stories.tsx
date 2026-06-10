@@ -1,8 +1,9 @@
 import { faker } from '@faker-js/faker';
 import type { Meta, StoryObj } from '@storybook/react';
+import { LayoutGroup, motion } from 'framer-motion';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Card from '../../ui/Card';
-import { CARDS, TALL_CARD } from '../../ui/cardData';
+import { CARDS, type CardDatum, TALL_CARD } from '../../ui/cardData';
 import ColumnPager from '../ColumnPager';
 import { getSectionPageRanges, type SectionPageRanges } from '../core/sectionRanges';
 import type { Page } from '../core/types';
@@ -312,56 +313,6 @@ export const AsyncStableGate: Story = {
   render: () => <StableGateDemo />,
 };
 
-/**
- * 소비자 측 문서 변환 예시 — 라이브러리는 렌더된 outerHTML만 내보내고(onPagesGenerated),
- * 이를 완전한 HTML 문서로 감싸는 건 사용처에서 한다. 여기선 현재 문서의 스타일시트를
- * 인라인해 iframe에 미리보기로 그린다. (PDF 변환도 동일하게 소비자에서)
- */
-const wrapAsDocument = (bodyHtml: string): string => {
-  const styles = Array.from(document.styleSheets)
-    .map((sheet) => {
-      try {
-        return Array.from(sheet.cssRules)
-          .map((r) => r.cssText)
-          .join('\n');
-      } catch {
-        return '';
-      }
-    })
-    .join('\n');
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>${bodyHtml}</body></html>`;
-};
-
-const PdfPreviewDemo = () => {
-  const [html, setHtml] = useState('');
-  return (
-    <>
-      <iframe
-        title="document preview"
-        srcDoc={html}
-        className="h-[80vh] w-[420px] border border-gray-400 bg-white"
-      />
-      <ColumnPager
-        hidden
-        columnCount={2}
-        showDividers
-        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
-        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
-        // 라이브러리는 outerHTML만 줌 → 소비자가 문서로 감싸 미리보기
-        onPagesGenerated={(_pages, renderedHtml) => setHtml(wrapAsDocument(renderedHtml))}
-      >
-        {renderCards(CARDS.slice(0, 12))}
-      </ColumnPager>
-    </>
-  );
-};
-
-export const PdfPreview: Story = {
-  name: '소비자 측 문서 변환 (iframe 미리보기)',
-  parameters: { controls: { disable: true } },
-  render: () => <PdfPreviewDemo />,
-};
-
 /** 길게 만들기용 샘플 (여러 줄, faker) */
 const LONG_TEXT = Array.from(
   { length: 30 },
@@ -626,5 +577,142 @@ export const PerPageHeaders: Story = {
     >
       {renderCards(CARDS.slice(0, 40))}
     </ColumnPager>
+  ),
+};
+
+/**
+ * 순서 변경 애니메이션 (framer-motion `layout`).
+ *
+ * 라이브러리는 framer-motion에 의존하지 않는다. 소비자가 `renderItem`으로 각 셀을
+ * `motion.div`(layout + layoutId)로 감싸고, child에 안정적 key를 부여하면(여기선
+ * `card.number`) 라이브러리가 그 key를 셀 정체성으로 전파한다(`RenderItemInfo.id`).
+ *
+ * - 같은 컬럼 내 이동: 같은 인스턴스 유지 → `layout`이 연속 애니메이션
+ * - 컬럼/페이지 경계를 넘는 이동: 인스턴스 remount → `layoutId` 공유 전환으로 애니메이션
+ * - 슬라이스(큰 아이템 분할)는 1:1 정체성이 없어 애니메이션에서 제외(셀 그대로 렌더)
+ *
+ * 셀 간격은 측정 경로에도 반영돼야 하므로(motion 래퍼는 가시 렌더에만 추가됨) 카드
+ * 래퍼의 `padding`으로 준다 — 측정되는 높이에 포함돼 페이지네이션과 어긋나지 않는다.
+ *
+ * 각 카드의 ▲/▼ 버튼으로 그 카드를 한 칸 위/아래로 이동(이웃과 자리 교환)한다. 측정 후
+ * 재페이지네이션이 비동기라, 페이지 경계를 넘는 이동은 살짝 늦거나 튈 수 있다(아키텍처
+ * 한계 — 같은 컬럼 내 재배치가 가장 매끈).
+ */
+const AnimatedReorderDemo = ({
+  columnCount,
+  showDividers,
+}: {
+  columnCount: number;
+  showDividers: boolean;
+}) => {
+  const [order, setOrder] = useState<CardDatum[]>(() => {
+    // 일반 카드들 사이에 컬럼 높이를 넘는 큰 카드(TALL_CARD)를 섞어 슬라이스 케이스를 보여준다.
+    // 큰 카드는 여러 조각으로 잘려(sliced) 애니메이션/이동 버튼에서 제외된다.
+    const base = CARDS.slice(0, 16);
+    base.splice(6, 0, TALL_CARD);
+    return base;
+  });
+
+  // 카드(id=card.number)를 한 칸 위(-1)/아래(+1)로 이동 — 이웃과 자리 교환.
+  const move = (id: string, dir: -1 | 1) =>
+    setOrder((prev) => {
+      const i = prev.findIndex((c) => String(c.number) === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= prev.length) return prev;
+      const next = prev.slice();
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+
+  const arrowBtn =
+    'flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white shadow ' +
+    'transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300';
+
+  // 카드 위에 떠 있는 위/아래 이동 버튼 (셀 overflow 밖). id로 order에서 한 칸 이동.
+  const controls = (cardId: string, index: number) => (
+    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+      <button
+        type="button"
+        aria-label="위로"
+        className={arrowBtn}
+        disabled={index <= 0}
+        onClick={() => move(cardId, -1)}
+      >
+        ▲
+      </button>
+      <button
+        type="button"
+        aria-label="아래로"
+        className={arrowBtn}
+        disabled={index < 0 || index >= order.length - 1}
+        onClick={() => move(cardId, 1)}
+      >
+        ▼
+      </button>
+    </div>
+  );
+
+  return (
+    <LayoutGroup>
+      <ColumnPager
+        columnCount={columnCount}
+        showDividers={showDividers}
+        // 애니메이션 중 이동 셀이 컬럼/본문 박스에 잘리지 않도록 클립 해제
+        clipOverflow={false}
+        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+        renderItem={({ id, sliced, sliceIndex, pageNumber, children }) => {
+          if (!id) return children;
+          const index = order.findIndex((c) => String(c.number) === id);
+
+          // 큰 카드(슬라이스): 조각마다 정체성이 1:1이 아니라 layout 애니메이션은 없다.
+          // 순서 변경은 가능 — 첫 조각(sliceIndex===0)에만 컨트롤을 띄우고, 클릭 시 재배치.
+          if (sliced) {
+            if (sliceIndex !== 0) return children;
+            return (
+              <div className="relative">
+                {controls(id, index)}
+                {children}
+              </div>
+            );
+          }
+
+          return (
+            <motion.div
+              // layoutId에 페이지 번호를 섞는다:
+              // - 같은 페이지 내 이동 → layoutId 유지 → 슬라이드(layout 애니메이션)
+              // - 페이지 경계를 넘는 이동 → layoutId가 바뀜 → 새 요소로 취급 →
+              //   날아가지(공유 전환) 않고 도착 페이지에서 initial opacity로 fade-in.
+              //   (출발 페이지에선 즉시 사라짐 — fade-out은 코어 훅 필요, 이번 범위 밖)
+              layout
+              layoutId={`${id}-p${pageNumber}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              // opacity(fade-in) 포함 전이.
+              transition={{ type: 'tween', duration: 0.5 }}
+              className="relative"
+            >
+              {controls(id, index)}
+              {children}
+            </motion.div>
+          );
+        }}
+      >
+        {order.map((card) => (
+          // key → block.id → RenderItemInfo.id (layoutId). padding으로 측정되는 간격 부여.
+          <div key={card.number} className="pb-4">
+            <Card {...card} />
+          </div>
+        ))}
+      </ColumnPager>
+    </LayoutGroup>
+  );
+};
+
+export const AnimatedReorder: Story = {
+  name: '순서 변경 애니메이션 (framer-motion)',
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  render: (args) => (
+    <AnimatedReorderDemo columnCount={args.columnCount} showDividers={args.showDividers} />
   ),
 };
