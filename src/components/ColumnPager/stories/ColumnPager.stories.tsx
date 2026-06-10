@@ -858,3 +858,50 @@ export const ItemGapStory: StoryObj<ItemGapArgs> = {
     </ColumnPager>
   ),
 };
+
+/**
+ * tightFill — 컬럼을 빽빽하게 채우기 (경계 카드 잘라 채움).
+ *
+ * 컬럼 남은 공간보다 큰 카드를 만나면:
+ * - 0(기본): 통째로 다음 컬럼으로 이동 → 컬럼 바닥에 빈 공간이 남는다(box 보존).
+ * - N(px): 남은 공간이 N보다 클 때만 그 카드를 잘라(column-count + translate) 남은 공간부터
+ *   채우고 나머지를 다음 컬럼/페이지로 이어 분할(긴 지문처럼). 큰 아이템 슬라이스와 동일.
+ *
+ * 슬라이더로 임계값을 올리면 작은 여백은 통째 이동, 큰 여백만 잘라 채우는 걸 비교할 수 있다.
+ * (분할은 block/flowable 콘텐츠에서 동작. multicol이 못 쪼개는 inline-block 등 원자적 박스는
+ *  통째 이동으로 폴백한다.)
+ */
+type TightFillArgs = StoryArgs & { tightFill: number };
+
+export const TightFill: StoryObj<TightFillArgs> = {
+  name: '여백 없이 채우기 (tightFill)',
+  args: {
+    columnCount: 2,
+    pageDirection: 'vertical',
+    showDividers: true,
+    itemGap: 16,
+    tightFill: 8,
+  },
+  argTypes: {
+    tightFill: {
+      control: { type: 'range', min: 0, max: 400, step: 8 },
+      description: '0=통째 이동(여백 허용). N(px)=남은 공간이 N보다 클 때만 잘라 채움.',
+    },
+  },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageDirection={args.pageDirection}
+      showDividers={args.showDividers}
+      itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
+      tightFill={args.tightFill}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {/* block 카드 — 경계에 걸친 카드는 잘려 다음 컬럼으로 이어진다(tightFill>0). */}
+      {renderCards(CARDS.slice(0, 16))}
+    </ColumnPager>
+  ),
+};
