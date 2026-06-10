@@ -13,10 +13,14 @@ type StoryArgs = {
   pageDirection: 'horizontal' | 'vertical';
   showDividers: boolean;
   itemGap: number;
+  columnGap: number;
+  bodyClassName: string;
 };
 
-/** 컨트롤이 없는 데모용 기본 아이템 간격(px) */
+/** 컨트롤이 없는 데모용 기본값 */
 const ITEM_GAP = 16;
+const COLUMN_GAP = 40;
+const BODY_CLASS = 'px-8 py-5';
 
 /**
  * ColumnPager — children을 컨테이너 폭(반응형) × `pageHeight` 페이지로 자동 분할하는 렌더러.
@@ -33,6 +37,7 @@ const meta: Meta<StoryArgs> = {
   title: 'PDF/ColumnPager',
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
+  args: { columnGap: COLUMN_GAP, bodyClassName: BODY_CLASS },
   argTypes: {
     columnCount: { control: { type: 'number', min: 1, max: 4 } },
     pageDirection: { control: 'radio', options: ['horizontal', 'vertical'] },
@@ -40,6 +45,14 @@ const meta: Meta<StoryArgs> = {
     itemGap: {
       control: { type: 'range', min: 0, max: 48, step: 2 },
       description: '아이템(카드) 사이 간격(px). 컬럼 첫 아이템 위에는 적용되지 않음.',
+    },
+    columnGap: {
+      control: { type: 'range', min: 0, max: 80, step: 4 },
+      description: '컬럼 사이 가로 간격(px). 라이브러리 기본값은 0.',
+    },
+    bodyClassName: {
+      control: 'text',
+      description: '본문 영역 클래스(패딩 등). 라이브러리 기본값은 없음(패딩 0).',
     },
   },
   decorators: [
@@ -80,6 +93,8 @@ export const Default: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -97,6 +112,8 @@ export const TwoColumns: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -114,6 +131,8 @@ export const WithPageBreak: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -135,6 +154,8 @@ export const TallItemSlicing: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -174,6 +195,8 @@ export const MoveOversizedItem: StoryObj<OversizedArgs> = {
       columnCount={2}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={COLUMN_GAP}
+      bodyClassName={BODY_CLASS}
       moveOversizedItemToNextColumn={args.moveOversizedItemToNextColumn}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
@@ -200,6 +223,8 @@ export const DynamicColumnCount: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -232,6 +257,8 @@ const SectionsDemo = () => {
         columnCount={2}
         showDividers
         itemGap={ITEM_GAP}
+        columnGap={COLUMN_GAP}
+        bodyClassName={BODY_CLASS}
         header={({ pageNumber, section }) => (
           <div className="flex h-[40px] items-center justify-between border-gray-300 border-b px-4">
             <span className="text-sm font-medium">{section ?? '-'}</span>
@@ -288,6 +315,8 @@ const StableGateDemo = () => {
       <ColumnPager
         columnCount={1}
         itemGap={ITEM_GAP}
+        columnGap={COLUMN_GAP}
+        bodyClassName={BODY_CLASS}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
         onPagesGenerated={(pages) => setPageCount(pages.length)}
@@ -378,6 +407,8 @@ const EditableDemo = () => {
         columnCount={2}
         showDividers
         itemGap={ITEM_GAP}
+        columnGap={COLUMN_GAP}
+        bodyClassName={BODY_CLASS}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
         onPagesGenerated={(pages) => {
@@ -448,6 +479,8 @@ const ShuffleDemo = () => {
         columnCount={2}
         showDividers
         itemGap={ITEM_GAP}
+        columnGap={COLUMN_GAP}
+        bodyClassName={BODY_CLASS}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
         onPagesGenerated={(pages) => {
@@ -505,6 +538,8 @@ export const PageSizing: StoryObj<SizingArgs> = {
         pageHeight={args.pageHeight}
         showDividers={args.showDividers}
         itemGap={args.itemGap}
+        columnGap={COLUMN_GAP}
+        bodyClassName={BODY_CLASS}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
       >
@@ -569,6 +604,8 @@ export const PerPageHeaders: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => {
         if (pageNumber === 1) return <CoverHeader />;
         return pageNumber % 2 === 1 ? (
@@ -670,6 +707,8 @@ const AnimatedReorderDemo = ({
         columnCount={columnCount}
         showDividers={showDividers}
         itemGap={itemGap}
+        columnGap={COLUMN_GAP}
+        bodyClassName={BODY_CLASS}
         // 애니메이션 중 이동 셀이 컬럼/본문 박스에 잘리지 않도록 클립 해제
         clipOverflow={false}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
@@ -757,6 +796,8 @@ export const DecoratorGroups: Story = {
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
       itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -804,6 +845,8 @@ export const ItemGapStory: StoryObj<ItemGapArgs> = {
     <ColumnPager
       columnCount={args.columnCount}
       itemGap={args.itemGap}
+      columnGap={COLUMN_GAP}
+      bodyClassName={BODY_CLASS}
       showDividers={args.showDividers}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
