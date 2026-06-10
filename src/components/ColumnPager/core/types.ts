@@ -128,4 +128,9 @@ export type Page = Column[];
 export type PaginateOptions = {
   /** 컬럼 높이를 초과하는 아이템을 (자르지 않고) 다음 컬럼으로 먼저 이동 */
   moveOversizedItemToNextColumn?: boolean;
+  /**
+   * 같은 컬럼 안 아이템 사이 세로 간격(px). 컬럼 첫 아이템 위에는 적용되지 않는다
+   * (= flex-col gap 시맨틱). 누적 높이 계산에 반영되어 렌더(Column의 flex gap)와 일치한다.
+   */
+  itemGap?: number;
 };

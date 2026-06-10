@@ -53,7 +53,7 @@ export const paginate = async (
   measurer: Measurer,
   options: PaginateOptions = {},
 ): Promise<Placement[]> => {
-  const { moveOversizedItemToNextColumn = false } = options;
+  const { moveOversizedItemToNextColumn = false, itemGap = 0 } = options;
   const contentBlocks = contentBlocksOf(blocks);
 
   const cursor: Cursor = {
@@ -119,14 +119,18 @@ export const paginate = async (
 
     // ---- 큰 아이템: 슬라이스 분할 ----
     if (itemHeight > columnHeight) {
-      const remainingHeight = columnHeight - cursor.filledHeight;
+      // 컬럼에 이미 내용이 있으면 큰 아이템 앞에도 gap → 슬라이싱이 gap만큼 아래에서 시작.
+      const gapBefore = cursor.filledHeight > 0 ? itemGap : 0;
+      const startFilled = cursor.filledHeight + gapBefore;
+      const remainingHeight = columnHeight - startFilled;
       const advancing =
         cursor.filledHeight > 0 &&
         (moveOversizedItemToNextColumn || remainingHeight < columnHeight * 0.05);
 
       if (advancing) advanceColumn(cursor);
 
-      const carry = advancing ? 0 : cursor.filledHeight;
+      // 새 컬럼으로 넘어가면(advancing) 컬럼 맨 위라 gap 없음(carry 0).
+      const carry = advancing ? 0 : startFilled;
       const overflow = await measurer.measureOverflow(
         contentBlocks[blockIndex],
         measure.container.width,
@@ -135,7 +139,7 @@ export const paginate = async (
       );
       const paddingHeight = (measure.decoratorHeight ?? 0) / 2;
       const count = sliceCount(overflow.flowWidth, overflow.sliceWidth);
-      const firstClip = firstSliceClip(columnHeight, cursor.filledHeight, advancing);
+      const firstClip = firstSliceClip(columnHeight, carry, advancing);
 
       for (let idx = 0; idx < count; idx++) {
         const isFirst = idx === 0;
@@ -177,11 +181,12 @@ export const paginate = async (
       continue;
     }
 
-    // ---- 일반 아이템: 누적 후 넘치면 다음 컬럼 ----
-    cursor.filledHeight += itemHeight;
+    // ---- 일반 아이템: (앞 아이템이 있으면 gap 더해) 누적 후 넘치면 다음 컬럼 ----
+    const gapBefore = cursor.filledHeight > 0 ? itemGap : 0;
+    cursor.filledHeight += gapBefore + itemHeight;
     if (cursor.filledHeight > columnHeight) {
       advanceColumn(cursor);
-      cursor.filledHeight = itemHeight;
+      cursor.filledHeight = itemHeight; // 새 컬럼 첫 아이템 → 앞 gap 없음
     }
 
     placements.push({

@@ -69,6 +69,11 @@ export type ColumnPagerProps = {
   clipOverflow?: boolean;
   /** 컬럼 높이 초과 아이템을 (자르기 전에) 다음 컬럼으로 먼저 이동 */
   moveOversizedItemToNextColumn?: boolean;
+  /**
+   * 같은 컬럼 안 아이템(카드) 사이 세로 간격(px). 컬럼 첫 아이템 위에는 적용되지 않는다.
+   * 페이지네이션 높이 계산과 렌더(Column flex gap)에 함께 반영되어 별도 스페이서가 필요 없다.
+   */
+  itemGap?: number;
   /** 페이지 헤더 렌더 */
   header?: (info: PageInfo) => ReactNode;
   /** 페이지 푸터 렌더 */
@@ -120,6 +125,7 @@ const ColumnPager = ({
   showDividers,
   clipOverflow = true,
   moveOversizedItemToNextColumn = false,
+  itemGap = 0,
   header,
   footer,
   renderItem,
@@ -196,7 +202,7 @@ const ColumnPager = ({
     children,
     columnCount,
     measurer,
-    options: { moveOversizedItemToNextColumn },
+    options: { moveOversizedItemToNextColumn, itemGap },
     // 폭이 아직 측정되지 않았으면(0) 보류 — 0폭 측정은 무의미
     paused: loading || containerWidth === 0,
     onError,
@@ -257,6 +263,7 @@ const ColumnPager = ({
         columnClassName={columnClassName}
         pageHeight={safePageHeight}
         clip={clipOverflow}
+        itemGap={itemGap}
       />
     );
   });

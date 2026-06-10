@@ -22,6 +22,8 @@ type PageProps = {
    * 페이지 높이는 PageSheet가 계속 클립하므로 정상 상태 모양은 유지된다.
    */
   clip?: boolean;
+  /** 같은 컬럼 아이템 사이 세로 간격(px). Column의 flex gap으로 렌더. */
+  itemGap?: number;
 };
 
 /** 한 페이지: Header / Body(Column×N) / Footer. 폭은 컨테이너 반응형. */
@@ -34,13 +36,18 @@ const Page = ({
   columnClassName,
   pageHeight,
   clip = true,
+  itemGap = 0,
 }: PageProps) => (
   <PageSheet height={pageHeight}>
     <Header>{header}</Header>
     <Body columnCount={columnCount} showDividers={showDividers} clip={clip}>
       {Array.from({ length: columnCount }).map((_, colIndex) => (
         // clip=false면 컬럼 overflow-visible (twMerge가 기본 overflow-hidden을 덮어씀)
-        <Column key={String(colIndex)} className={cn(columnClassName, !clip && 'overflow-visible')}>
+        <Column
+          key={String(colIndex)}
+          itemGap={itemGap}
+          className={cn(columnClassName, !clip && 'overflow-visible')}
+        >
           {columns[colIndex] ?? null}
         </Column>
       ))}
