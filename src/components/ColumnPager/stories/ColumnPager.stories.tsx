@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import type { Meta, StoryObj } from '@storybook/react';
 import { LayoutGroup, motion } from 'framer-motion';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Card from '../../ui/Card';
 import { CARDS, type CardDatum, TALL_CARD } from '../../ui/cardData';
 import ColumnPager from '../ColumnPager';
@@ -12,7 +12,11 @@ type StoryArgs = {
   columnCount: number;
   pageDirection: 'horizontal' | 'vertical';
   showDividers: boolean;
+  itemGap: number;
 };
+
+/** 컨트롤이 없는 데모용 기본 아이템 간격(px) */
+const ITEM_GAP = 16;
 
 /**
  * ColumnPager — children을 컨테이너 폭(반응형) × `pageHeight` 페이지로 자동 분할하는 렌더러.
@@ -33,6 +37,10 @@ const meta: Meta<StoryArgs> = {
     columnCount: { control: { type: 'number', min: 1, max: 4 } },
     pageDirection: { control: 'radio', options: ['horizontal', 'vertical'] },
     showDividers: { control: 'boolean' },
+    itemGap: {
+      control: { type: 'range', min: 0, max: 48, step: 2 },
+      description: '아이템(카드) 사이 간격(px). 컬럼 첫 아이템 위에는 적용되지 않음.',
+    },
   },
   decorators: [
     (Story) => (
@@ -59,23 +67,19 @@ const SampleFooter = ({ pageNumber }: { pageNumber: number }) => (
   </div>
 );
 
-/** 카드 목록을 ColumnPager children으로 (사이 간격 포함) */
+/** 카드 목록을 ColumnPager children으로 (간격은 ColumnPager의 itemGap이 처리) */
 const renderCards = (cards: typeof CARDS) =>
-  cards.map((card) => (
-    <Fragment key={card.number}>
-      <Card {...card} />
-      <div className="h-4" />
-    </Fragment>
-  ));
+  cards.map((card) => <Card key={card.number} {...card} />);
 
 export const Default: Story = {
   name: '기본 (1컬럼)',
-  args: { columnCount: 1, pageDirection: 'vertical', showDividers: false },
+  args: { columnCount: 1, pageDirection: 'vertical', showDividers: false, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -86,12 +90,13 @@ export const Default: Story = {
 
 export const TwoColumns: Story = {
   name: '2컬럼 + 구분선',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -102,12 +107,13 @@ export const TwoColumns: Story = {
 
 export const WithPageBreak: Story = {
   name: 'PageBreak / ColumnBreak',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: false },
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: false, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -122,20 +128,19 @@ export const WithPageBreak: Story = {
 
 export const TallItemSlicing: Story = {
   name: '큰 아이템 슬라이스',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
       <Card {...CARDS[3]} />
-      <div className="h-4" />
       {/* 컬럼 높이를 초과하는 키 큰 카드 → 여러 컬럼으로 잘려 이어짐 */}
       <Card {...TALL_CARD} />
-      <div className="h-4" />
       <Card {...CARDS[4]} />
     </ColumnPager>
   ),
@@ -153,26 +158,28 @@ export const TallItemSlicing: Story = {
 type OversizedArgs = {
   moveOversizedItemToNextColumn: boolean;
   showDividers: boolean;
+  itemGap: number;
 };
 
 export const MoveOversizedItem: StoryObj<OversizedArgs> = {
   name: '큰 아이템 다음 컬럼으로 이동',
-  args: { moveOversizedItemToNextColumn: false, showDividers: true },
+  args: { moveOversizedItemToNextColumn: false, showDividers: true, itemGap: 16 },
   argTypes: {
     moveOversizedItemToNextColumn: { control: 'boolean' },
     showDividers: { control: 'boolean' },
+    itemGap: { control: { type: 'range', min: 0, max: 48, step: 2 } },
   },
   render: (args) => (
     <ColumnPager
       columnCount={2}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       moveOversizedItemToNextColumn={args.moveOversizedItemToNextColumn}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
       {/* 첫 컬럼을 일부 채우는 일반 카드 */}
       <Card {...CARDS[0]} />
-      <div className="h-4" />
       {/* 컬럼 높이를 초과하는 큰 카드:
           off → 위 카드 아래(남은 공간)부터 잘려 시작 / on → 다음 컬럼 맨 위에서 시작 */}
       <Card {...TALL_CARD} />
@@ -186,12 +193,13 @@ export const MoveOversizedItem: StoryObj<OversizedArgs> = {
  */
 export const DynamicColumnCount: Story = {
   name: 'PageBreak 컬럼 수 변경',
-  args: { columnCount: 1, pageDirection: 'vertical', showDividers: true },
+  args: { columnCount: 1, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
@@ -223,6 +231,7 @@ const SectionsDemo = () => {
       <ColumnPager
         columnCount={2}
         showDividers
+        itemGap={ITEM_GAP}
         header={({ pageNumber, section }) => (
           <div className="flex h-[40px] items-center justify-between border-gray-300 border-b px-4">
             <span className="text-sm font-medium">{section ?? '-'}</span>
@@ -278,12 +287,12 @@ const StableGateDemo = () => {
       </div>
       <ColumnPager
         columnCount={1}
+        itemGap={ITEM_GAP}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
         onPagesGenerated={(pages) => setPageCount(pages.length)}
       >
         <Card {...CARDS[0]} />
-        <div className="h-4" />
         <ColumnPager.StableGate stable={loaded}>
           {loaded ? (
             <div className="space-y-2">
@@ -300,7 +309,6 @@ const StableGateDemo = () => {
             </div>
           )}
         </ColumnPager.StableGate>
-        <div className="h-4" />
         <Card {...CARDS[1]} />
       </ColumnPager>
     </>
@@ -369,6 +377,7 @@ const EditableDemo = () => {
       <ColumnPager
         columnCount={2}
         showDividers
+        itemGap={ITEM_GAP}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
         onPagesGenerated={(pages) => {
@@ -378,10 +387,7 @@ const EditableDemo = () => {
         }}
       >
         {renderCards(CARDS.slice(0, 4))}
-        <Fragment key="editable">
-          <Card number={5} title="✏️ 편집 카드 (중간)" lines={lines} />
-          <div className="h-4" />
-        </Fragment>
+        <Card key="editable" number={5} title="✏️ 편집 카드 (중간)" lines={lines} />
         {renderCards(CARDS.slice(5, 12))}
       </ColumnPager>
     </>
@@ -441,6 +447,7 @@ const ShuffleDemo = () => {
       <ColumnPager
         columnCount={2}
         showDividers
+        itemGap={ITEM_GAP}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
         onPagesGenerated={(pages) => {
@@ -472,11 +479,12 @@ type SizingArgs = {
   pageHeight: number;
   columnCount: number;
   showDividers: boolean;
+  itemGap: number;
 };
 
 export const PageSizing: StoryObj<SizingArgs> = {
   name: '넓이 / 높이 설정',
-  args: { width: 794, pageHeight: 1123, columnCount: 2, showDividers: true },
+  args: { width: 794, pageHeight: 1123, columnCount: 2, showDividers: true, itemGap: 16 },
   argTypes: {
     width: {
       control: { type: 'range', min: 360, max: 1200, step: 10 },
@@ -488,6 +496,7 @@ export const PageSizing: StoryObj<SizingArgs> = {
     },
     columnCount: { control: { type: 'number', min: 1, max: 4 } },
     showDividers: { control: 'boolean' },
+    itemGap: { control: { type: 'range', min: 0, max: 48, step: 2 } },
   },
   render: (args) => (
     <div style={{ width: args.width }}>
@@ -495,6 +504,7 @@ export const PageSizing: StoryObj<SizingArgs> = {
         columnCount={args.columnCount}
         pageHeight={args.pageHeight}
         showDividers={args.showDividers}
+        itemGap={args.itemGap}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
         footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
       >
@@ -552,12 +562,13 @@ const EvenFooter = ({ pageNumber }: { pageNumber: number }) => (
  */
 export const PerPageHeaders: Story = {
   name: '첫/홀수/짝수 헤더·푸터',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => {
         if (pageNumber === 1) return <CoverHeader />;
         return pageNumber % 2 === 1 ? (
@@ -591,8 +602,7 @@ export const PerPageHeaders: Story = {
  * - 컬럼/페이지 경계를 넘는 이동: 인스턴스 remount → `layoutId` 공유 전환으로 애니메이션
  * - 슬라이스(큰 아이템 분할)는 1:1 정체성이 없어 애니메이션에서 제외(셀 그대로 렌더)
  *
- * 셀 간격은 측정 경로에도 반영돼야 하므로(motion 래퍼는 가시 렌더에만 추가됨) 카드
- * 래퍼의 `padding`으로 준다 — 측정되는 높이에 포함돼 페이지네이션과 어긋나지 않는다.
+ * 셀 간격은 `itemGap`으로 준다(컬럼 flex gap + 페이지네이션 누적에 반영).
  *
  * 각 카드의 ▲/▼ 버튼으로 그 카드를 한 칸 위/아래로 이동(이웃과 자리 교환)한다. 측정 후
  * 재페이지네이션이 비동기라, 페이지 경계를 넘는 이동은 살짝 늦거나 튈 수 있다(아키텍처
@@ -601,9 +611,11 @@ export const PerPageHeaders: Story = {
 const AnimatedReorderDemo = ({
   columnCount,
   showDividers,
+  itemGap,
 }: {
   columnCount: number;
   showDividers: boolean;
+  itemGap: number;
 }) => {
   const [order, setOrder] = useState<CardDatum[]>(() => {
     // 일반 카드들 사이에 컬럼 높이를 넘는 큰 카드(TALL_CARD)를 섞어 슬라이스 케이스를 보여준다.
@@ -657,6 +669,7 @@ const AnimatedReorderDemo = ({
       <ColumnPager
         columnCount={columnCount}
         showDividers={showDividers}
+        itemGap={itemGap}
         // 애니메이션 중 이동 셀이 컬럼/본문 박스에 잘리지 않도록 클립 해제
         clipOverflow={false}
         header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
@@ -699,10 +712,8 @@ const AnimatedReorderDemo = ({
         }}
       >
         {order.map((card) => (
-          // key → block.id → RenderItemInfo.id (layoutId). padding으로 측정되는 간격 부여.
-          <div key={card.number} className="pb-4">
-            <Card {...card} />
-          </div>
+          // key → block.id → RenderItemInfo.id (layoutId). 간격은 itemGap이 처리.
+          <Card key={card.number} {...card} />
         ))}
       </ColumnPager>
     </LayoutGroup>
@@ -711,9 +722,13 @@ const AnimatedReorderDemo = ({
 
 export const AnimatedReorder: Story = {
   name: '순서 변경 애니메이션 (framer-motion)',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
   render: (args) => (
-    <AnimatedReorderDemo columnCount={args.columnCount} showDividers={args.showDividers} />
+    <AnimatedReorderDemo
+      columnCount={args.columnCount}
+      showDividers={args.showDividers}
+      itemGap={args.itemGap}
+    />
   ),
 };
 
@@ -729,45 +744,74 @@ export const AnimatedReorder: Story = {
  * 응용: "섹션 박스", "강조 묶음", "카테고리별 배경" 등 — 한 번 감싸면 그룹 전체가 같은
  * 시각 처리를 받으면서도 분할/페이지 넘김은 그대로 동작한다.
  *
- * 셀 간 간격은 카드 래퍼의 `pb-*`(측정되는 padding)로 준다.
+ * 셀 간 간격은 `itemGap`이 처리한다(그룹 안/그룹 사이 모두 동일 간격).
  */
 const decoFrame = 'rounded-2xl p-10';
 
 export const DecoratorGroups: Story = {
   name: '데코레이터 (프레임 그룹)',
-  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
   render: (args) => (
     <ColumnPager
       columnCount={args.columnCount}
       pageDirection={args.pageDirection}
       showDividers={args.showDividers}
+      itemGap={args.itemGap}
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
       {/* 그룹 A: 일반 카드 묶음 — 각 카드가 같은 인디고 프레임을 입고 컬럼을 넘어 흐른다 */}
       <ColumnPager.Decorator className={`${decoFrame} bg-indigo-100`}>
         {CARDS.slice(0, 6).map((c) => (
-          <div key={c.number} className="pb-3 last:pb-0">
-            <Card {...c} />
-          </div>
+          <Card key={c.number} {...c} />
         ))}
       </ColumnPager.Decorator>
 
-      {/* 그룹 사이 간격 (데코레이터 밖의 일반 스페이서) */}
-      <div className="h-5" />
-
       {/* 그룹 B: 큰 카드 포함 — 컬럼 높이를 넘어 잘려도 각 조각이 앰버 프레임을 유지 */}
       <ColumnPager.Decorator className={`${decoFrame} bg-amber-100`}>
-        <div className="pb-3">
-          <Card {...CARDS[6]} />
-        </div>
-        <div className="pb-3">
-          <Card {...TALL_CARD} />
-        </div>
-        <div className="pb-0">
-          <Card {...CARDS[7]} />
-        </div>
+        <Card {...CARDS[6]} />
+        <Card {...TALL_CARD} />
+        <Card {...CARDS[7]} />
       </ColumnPager.Decorator>
+    </ColumnPager>
+  ),
+};
+
+/**
+ * itemGap — 아이템(카드) 사이 세로 간격.
+ *
+ * 별도 스페이서 블록(`<div className="h-4" />`)이나 카드 padding 없이 `itemGap` prop 하나로
+ * 카드를 그냥 나열하면 된다. 간격은:
+ * - **같은 컬럼 아이템 사이에만** 들어가고 **컬럼 첫 아이템 위에는 없음**(고아 갭 방지).
+ * - 페이지네이션 누적 높이 계산과 렌더(Column flex gap) 양쪽에 반영돼 어긋나지 않음.
+ *
+ * 슬라이더로 간격을 바꿔보면 페이지 수/배치가 즉시 다시 계산된다.
+ */
+type ItemGapArgs = { itemGap: number; columnCount: number; showDividers: boolean };
+
+export const ItemGapStory: StoryObj<ItemGapArgs> = {
+  name: '아이템 간격 (itemGap)',
+  args: { itemGap: 16, columnCount: 2, showDividers: true },
+  argTypes: {
+    itemGap: {
+      control: { type: 'range', min: 0, max: 48, step: 2 },
+      description: '카드(아이템) 사이 간격(px). 컬럼 첫 아이템 위에는 적용되지 않음.',
+    },
+    columnCount: { control: { type: 'number', min: 1, max: 4 } },
+    showDividers: { control: 'boolean' },
+  },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      itemGap={args.itemGap}
+      showDividers={args.showDividers}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {/* 스페이서/padding 없이 카드만 나열 — 간격은 itemGap이 처리 */}
+      {CARDS.slice(0, 20).map((c) => (
+        <Card key={c.number} {...c} />
+      ))}
     </ColumnPager>
   ),
 };
