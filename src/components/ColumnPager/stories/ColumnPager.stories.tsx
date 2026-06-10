@@ -716,3 +716,58 @@ export const AnimatedReorder: Story = {
     <AnimatedReorderDemo columnCount={args.columnCount} showDividers={args.showDividers} />
   ),
 };
+
+/**
+ * 데코레이터 패턴 — `data-cp-decorator` 래퍼로 묶인 자식들이 "같은 프레임(배경/패딩/라운드)"을
+ * 입은 채, 각자 독립적으로 컬럼·페이지를 흐른다.
+ *
+ * - 래퍼 자체는 DOM으로 렌더되지 않는다. 래퍼의 `className`이 각 자식 셀에 전파된다
+ *   → 묶음처럼 보이지만 페이지네이션은 아이템 단위로 자연스럽게 흐름.
+ * - 프레임의 패딩/보더(chrome) 높이는 빈 래퍼 복제본으로 측정돼 슬라이스 계산에 반영된다
+ *   → 큰 카드가 잘려도 각 조각이 프레임 패딩을 유지(그룹 B의 TALL_CARD).
+ *
+ * 응용: "섹션 박스", "강조 묶음", "카테고리별 배경" 등 — 한 번 감싸면 그룹 전체가 같은
+ * 시각 처리를 받으면서도 분할/페이지 넘김은 그대로 동작한다.
+ *
+ * 셀 간 간격은 카드 래퍼의 `pb-*`(측정되는 padding)로 준다.
+ */
+const decoFrame = 'rounded-2xl p-10';
+
+export const DecoratorGroups: Story = {
+  name: '데코레이터 (프레임 그룹)',
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageDirection={args.pageDirection}
+      showDividers={args.showDividers}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {/* 그룹 A: 일반 카드 묶음 — 각 카드가 같은 인디고 프레임을 입고 컬럼을 넘어 흐른다 */}
+      <ColumnPager.Decorator className={`${decoFrame} bg-indigo-100`}>
+        {CARDS.slice(0, 6).map((c) => (
+          <div key={c.number} className="pb-3 last:pb-0">
+            <Card {...c} />
+          </div>
+        ))}
+      </ColumnPager.Decorator>
+
+      {/* 그룹 사이 간격 (데코레이터 밖의 일반 스페이서) */}
+      <div className="h-5" />
+
+      {/* 그룹 B: 큰 카드 포함 — 컬럼 높이를 넘어 잘려도 각 조각이 앰버 프레임을 유지 */}
+      <ColumnPager.Decorator className={`${decoFrame} bg-amber-100`}>
+        <div className="pb-3">
+          <Card {...CARDS[6]} />
+        </div>
+        <div className="pb-3">
+          <Card {...TALL_CARD} />
+        </div>
+        <div className="pb-0">
+          <Card {...CARDS[7]} />
+        </div>
+      </ColumnPager.Decorator>
+    </ColumnPager>
+  ),
+};
