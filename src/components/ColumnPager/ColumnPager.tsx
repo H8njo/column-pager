@@ -59,6 +59,10 @@ export type ColumnPagerProps = {
   hidden?: boolean;
   /** 컬럼에 적용할 클래스 */
   columnClassName?: string;
+  /** 본문(컬럼들을 담는 영역) 클래스. 패딩 등 — 기본값 없음(패딩 0). */
+  bodyClassName?: string;
+  /** 컬럼 사이 가로 간격(px). 기본 0. */
+  columnGap?: number;
   /** 컬럼 사이 구분선 */
   showDividers?: boolean;
   /**
@@ -122,6 +126,8 @@ const ColumnPager = ({
   loading,
   hidden,
   columnClassName,
+  bodyClassName,
+  columnGap = 0,
   showDividers,
   clipOverflow = true,
   moveOversizedItemToNextColumn = false,
@@ -191,8 +197,19 @@ const ColumnPager = ({
       columnClassName,
       containerWidth,
       pageHeight: safePageHeight,
+      columnGap,
+      bodyClassName,
     }),
-    [hasHeader, hasFooter, showDividers, columnClassName, containerWidth, safePageHeight],
+    [
+      hasHeader,
+      hasFooter,
+      showDividers,
+      columnClassName,
+      containerWidth,
+      safePageHeight,
+      columnGap,
+      bodyClassName,
+    ],
   );
 
   // measurer는 config(컨테이너 폭 포함)가 바뀔 때만 새로 생성 → 캐시 유지 + 폭 변경 시 재페이지네이션.
@@ -264,6 +281,8 @@ const ColumnPager = ({
         pageHeight={safePageHeight}
         clip={clipOverflow}
         itemGap={itemGap}
+        columnGap={columnGap}
+        bodyClassName={bodyClassName}
       />
     );
   });

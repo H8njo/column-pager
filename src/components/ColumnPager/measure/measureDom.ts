@@ -25,6 +25,10 @@ export type MeasurerConfig = {
   containerWidth?: number;
   /** 페이지 높이(px) */
   pageHeight?: number;
+  /** 컬럼 사이 가로 간격(px) — 컬럼 폭에 영향 → 측정에 반드시 반영 */
+  columnGap?: number;
+  /** 본문 영역 클래스(패딩 등) — 컬럼 폭에 영향 → 측정에 반드시 반영 */
+  bodyClassName?: string;
 };
 
 const chunk = <T>(arr: readonly T[], size: number): T[][] => {
@@ -50,6 +54,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     chunkSize = 30,
     containerWidth,
     pageHeight,
+    columnGap,
+    bodyClassName,
   } = config;
 
   const columnBoxCache = new Map<string, Size>();
@@ -85,6 +91,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
             showDividers,
             columnClassName,
             pageHeight,
+            columnGap,
+            bodyClassName,
           }),
         ],
         'layout',
