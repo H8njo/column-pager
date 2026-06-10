@@ -74,6 +74,15 @@ export type ColumnPagerProps = {
   /** 컬럼 높이 초과 아이템을 (자르기 전에) 다음 컬럼으로 먼저 이동 */
   moveOversizedItemToNextColumn?: boolean;
   /**
+   * 컬럼을 빽빽하게 채우는 "최소 여백(px) 임계값". 경계에 걸친 아이템(남은 공간보다 큰)을 잘라
+   * 남은 공간부터 채우고 다음 컬럼/페이지로 이어 분할한다.
+   * - falsy(0/미지정): 분할 안 함 — 통째 다음 컬럼/페이지로(여백 허용, box 보존).
+   * - N(px): 남은 공간이 N보다 클 때만 잘라 채움(작은 여백은 통째). 작게(예: 1) 주면 사실상 항상.
+   * 분할 시 카드 box는 경계에서 잘려 보일 수 있고, 원자적 박스(inline-block 등)는 통째 이동 폴백.
+   * (컬럼 높이보다 큰 아이템은 이 옵션과 무관하게 항상 분할된다.)
+   */
+  tightFill?: number;
+  /**
    * 같은 컬럼 안 아이템(카드) 사이 세로 간격(px). 컬럼 첫 아이템 위에는 적용되지 않는다.
    * 페이지네이션 높이 계산과 렌더(Column flex gap)에 함께 반영되어 별도 스페이서가 필요 없다.
    */
@@ -131,6 +140,7 @@ const ColumnPager = ({
   showDividers,
   clipOverflow = true,
   moveOversizedItemToNextColumn = false,
+  tightFill = 0,
   itemGap = 0,
   header,
   footer,
@@ -219,7 +229,7 @@ const ColumnPager = ({
     children,
     columnCount,
     measurer,
-    options: { moveOversizedItemToNextColumn, itemGap },
+    options: { moveOversizedItemToNextColumn, itemGap, tightFill },
     // 폭이 아직 측정되지 않았으면(0) 보류 — 0폭 측정은 무의미
     paused: loading || containerWidth === 0,
     onError,
