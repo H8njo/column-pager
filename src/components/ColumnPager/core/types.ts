@@ -20,6 +20,12 @@ export type ContentBlock = {
    * 측정 캐시 키 + 재페이지네이션 트리거에 재사용해 트리 중복 순회를 막는다.
    */
   signature?: string;
+  /**
+   * 소비자 child의 React key (있으면). 순서가 바뀌어도 동일 아이템을 추적하는
+   * "안정적 정체성"으로, 렌더 시 셀 key 및 layout 애니메이션(framer-motion 등)
+   * 식별자로 쓰인다. key가 없으면 undefined → 위치 기반 인덱스로 폴백.
+   */
+  id?: string;
 };
 
 /** 강제 페이지 넘김 (+선택적 columnCount 변경) */

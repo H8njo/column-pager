@@ -42,6 +42,9 @@ const content = (node: ReactNode, extra: Partial<ContentBlock> = {}): ContentBlo
   // 블록 생성 시 노드 시그니처를 1회 계산해 부착 → 측정 캐시 키/재계산 트리거에서 재사용
   // (measureItems마다, 그리고 usePagination 렌더마다 다시 트리를 순회하던 비용 제거).
   signature: blocksSignature(node),
+  // 소비자가 element에 부여한 key를 안정적 정체성으로 보관(순서 변경 추적/layout 애니메이션용).
+  // element가 아니거나 key가 없으면 undefined.
+  id: isValidElement(node) && node.key != null ? String(node.key) : undefined,
   ...extra,
 });
 

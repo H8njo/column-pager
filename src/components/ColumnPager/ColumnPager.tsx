@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import Container from './components/Container';
 import ItemCell from './components/ItemCell';
 import { STABLE_ATTR, stableSelector } from './components/keys';
@@ -24,6 +24,24 @@ const HIDDEN_CLASS = 'invisible h-0 overflow-hidden';
 /** 헤더/푸터 렌더 함수 인자 */
 export type PageInfo = { pageNumber: number; section?: string };
 
+/** renderItem 래퍼 인자 — 배치된 한 셀을 감쌀 때 전달된다 */
+export type RenderItemInfo = {
+  /** 소비자 child key 기반 안정적 정체성 (key 미지정 시 undefined). layout 애니메이션 식별자로 사용. */
+  id?: string;
+  /** content 블록 인덱스 (위치 기반) */
+  blockIndex: number;
+  /** 큰 아이템이 잘려 여러 조각으로 렌더되는 슬라이스인지 (true면 layout 애니메이션 비권장) */
+  sliced: boolean;
+  /** 슬라이스 조각 인덱스 (0부터). 슬라이스가 아니면 undefined. 첫 조각(0)에만 컨트롤을 다는 용도. */
+  sliceIndex?: number;
+  /** 전체 슬라이스 조각 수. 슬라이스가 아니면 undefined. */
+  sliceCount?: number;
+  /** 페이지 번호 (1부터) */
+  pageNumber: number;
+  /** 렌더된 셀(ItemCell/SliceView) — 이걸 motion 등으로 감싸 반환 */
+  children: ReactNode;
+};
+
 export type ColumnPagerProps = {
   children?: ReactNode;
   /** 페이지당 컬럼 수 (기본 1) */
@@ -42,12 +60,25 @@ export type ColumnPagerProps = {
   columnClassName?: string;
   /** 컬럼 사이 구분선 */
   showDividers?: boolean;
+  /**
+   * 컬럼/본문 박스 클립 여부 (기본 true = 현 동작). false면 Column·Body가 overflow-visible이
+   * 되어 layout 애니메이션(renderItem) 중 이동하는 셀이 잘리지 않는다. 큰 아이템 슬라이스는
+   * SliceView가 자체 클립하고 페이지 높이는 PageSheet가 계속 클립하므로 정상 상태 모양은 유지.
+   */
+  clipOverflow?: boolean;
   /** 컬럼 높이 초과 아이템을 (자르기 전에) 다음 컬럼으로 먼저 이동 */
   moveOversizedItemToNextColumn?: boolean;
   /** 페이지 헤더 렌더 */
   header?: (info: PageInfo) => ReactNode;
   /** 페이지 푸터 렌더 */
   footer?: (info: PageInfo) => ReactNode;
+  /**
+   * 배치된 각 셀을 감싸는 래퍼(선택). 순서/위치 변경 시 framer-motion 등으로 layout
+   * 애니메이션을 입히는 용도. 라이브러리는 framer-motion에 의존하지 않으며, 소비자가
+   * motion.div(layoutId) 등을 직접 반환한다. 미지정 시 셀을 그대로 렌더.
+   * 안정적 정체성(info.id)은 child에 부여한 React key에서 온다.
+   */
+  renderItem?: (info: RenderItemInfo) => ReactNode;
   /** 페이지 생성 완료 콜백. html은 렌더된 컨테이너의 outerHTML(문서 변환은 소비자 몫). */
   onPagesGenerated?: (pages: PageData[], html: string) => void;
   /** stable 폴링 타임아웃 (ms). 초과 시 onStableTimeout 후 강제 emit. 기본 5000. */
@@ -86,9 +117,11 @@ const ColumnPager = ({
   hidden,
   columnClassName,
   showDividers,
+  clipOverflow = true,
   moveOversizedItemToNextColumn = false,
   header,
   footer,
+  renderItem,
   onPagesGenerated,
   stableTimeoutMs = 5000,
   onStableTimeout,
@@ -168,28 +201,44 @@ const ColumnPager = ({
     onError,
   });
 
-  // ---- 렌더: placement → ItemCell / SliceView ----
-  const renderPlacement = (placement: Placement): ReactNode => {
+  // ---- 렌더: placement → ItemCell / SliceView (+ 선택적 renderItem 래퍼) ----
+  const renderPlacement = (placement: Placement, pageIndex: number): ReactNode => {
     const block = contentBlocks[placement.blockIndex];
     if (!block) return null;
-    const { node, decoratorClassName } = block;
+    const { node, decoratorClassName, id } = block;
+    const sliced = !!placement.slice;
 
-    if (placement.slice) {
-      return (
-        <SliceView
-          key={`b${placement.blockIndex}-s${placement.slice.index}`}
-          slice={placement.slice}
-          decoratorClassName={decoratorClassName}
-        >
-          {node}
-        </SliceView>
-      );
-    }
-    return (
-      <ItemCell key={`b${placement.blockIndex}`} decoratorClassName={decoratorClassName}>
+    const cell = sliced ? (
+      <SliceView
+        slice={placement.slice as NonNullable<Placement['slice']>}
+        decoratorClassName={decoratorClassName}
+      >
         {node}
-      </ItemCell>
+      </SliceView>
+    ) : (
+      <ItemCell decoratorClassName={decoratorClassName}>{node}</ItemCell>
     );
+
+    // 안정적 정체성: 소비자 key(id) 우선, 없으면 위치 기반(blockIndex)으로 폴백.
+    // 순서가 바뀌어도 같은 아이템이 같은 React key를 유지 → layout 애니메이션이 "이동"으로 인식.
+    const baseKey = id ?? `b${placement.blockIndex}`;
+    const key = sliced
+      ? `${baseKey}-s${(placement.slice as NonNullable<Placement['slice']>).index}`
+      : baseKey;
+
+    const rendered = renderItem
+      ? renderItem({
+          id,
+          blockIndex: placement.blockIndex,
+          sliced,
+          sliceIndex: placement.slice?.index,
+          sliceCount: placement.slice?.count,
+          pageNumber: pageIndex + 1,
+          children: cell,
+        })
+      : cell;
+
+    return <Fragment key={key}>{rendered}</Fragment>;
   };
 
   const renderedPages = pages.map((page, pageIndex) => {
@@ -200,12 +249,13 @@ const ColumnPager = ({
         // biome-ignore lint/suspicious/noArrayIndexKey: 페이지 순서는 안정적
         key={pageIndex}
         columnCount={pageColumnCount}
-        columns={page.map((column) => column.map(renderPlacement))}
+        columns={page.map((column) => column.map((p) => renderPlacement(p, pageIndex)))}
         header={header?.({ pageNumber: pageIndex + 1, section })}
         footer={footer?.({ pageNumber: pageIndex + 1, section })}
         showDividers={showDividers}
         columnClassName={columnClassName}
         pageHeight={safePageHeight}
+        clip={clipOverflow}
       />
     );
   });

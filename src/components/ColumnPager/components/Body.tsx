@@ -5,13 +5,26 @@ import { KEY } from './keys';
 type BodyProps = HTMLAttributes<HTMLDivElement> & {
   columnCount: number;
   showDividers?: boolean;
+  /** 본문 박스 클립 여부 (기본 true). false면 overflow-visible — layout 애니메이션이 잘리지 않음. */
+  clip?: boolean;
 };
 
 /** 컬럼들을 가로로 담는 본문 영역. showDividers 시 컬럼 사이 구분선. */
-const Body = ({ children, className, columnCount, showDividers, ...props }: BodyProps) => (
+const Body = ({
+  children,
+  className,
+  columnCount,
+  showDividers,
+  clip = true,
+  ...props
+}: BodyProps) => (
   <div
     data-cp={KEY.BODY}
-    className={cn('relative flex grow flex-row gap-10 overflow-hidden px-8 py-5', className)}
+    className={cn(
+      'relative flex grow flex-row gap-10 px-8 py-5',
+      clip ? 'overflow-hidden' : 'overflow-visible',
+      className,
+    )}
     {...props}
   >
     {showDividers &&

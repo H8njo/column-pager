@@ -5,7 +5,7 @@
  * 컬럼 높이를 초과하는 요소는 CSS 멀티컬럼 기법으로 잘라 여러 컬럼/페이지에 이어 표현.
  */
 
-export type { ColumnPagerProps, PageInfo } from './ColumnPager';
+export type { ColumnPagerProps, PageInfo, RenderItemInfo } from './ColumnPager';
 export { default as ColumnPager } from './ColumnPager';
 // 컨트롤 props 타입 (컴파운드 API: ColumnPager.PageBreak 등)
 export type { PageBreakProps } from './controls/PageBreak';
