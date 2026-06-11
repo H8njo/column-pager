@@ -15,7 +15,11 @@ type StoryArgs = {
   itemGap: number;
   columnGap: number;
   bodyClassName: string;
+  width: number;
 };
+
+/** 데모 기본 컨테이너 폭(px) — A4 폭(794) 기준 */
+const DEFAULT_WIDTH = 794;
 
 /** 컨트롤이 없는 데모용 기본값 */
 const ITEM_GAP = 16;
@@ -37,11 +41,16 @@ const meta: Meta<StoryArgs> = {
   title: 'PDF/ColumnPager',
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
-  args: { columnGap: COLUMN_GAP, bodyClassName: BODY_CLASS },
+  args: { columnGap: COLUMN_GAP, bodyClassName: BODY_CLASS, width: DEFAULT_WIDTH },
   argTypes: {
     columnCount: { control: { type: 'number', min: 1, max: 4 } },
     pageDirection: { control: 'radio', options: ['horizontal', 'vertical'] },
     showDividers: { control: 'boolean' },
+    width: {
+      control: { type: 'range', min: 360, max: 1200, step: 10 },
+      description:
+        '컨테이너 폭(px). prop이 아니라 컨테이너 폭에 반응 — ResizeObserver가 감지(디바운스) 후 재페이지네이션.',
+    },
     itemGap: {
       control: { type: 'range', min: 0, max: 48, step: 2 },
       description: '아이템(카드) 사이 간격(px). 컬럼 첫 아이템 위에는 적용되지 않음.',
@@ -56,9 +65,13 @@ const meta: Meta<StoryArgs> = {
     },
   },
   decorators: [
-    (Story) => (
-      <div style={{ backgroundColor: '#b6b6b6', padding: 20, minHeight: '100vh', minWidth: 834 }}>
-        <Story />
+    // width 컨트롤을 전역 적용: 컨테이너 폭을 args.width로 감싸 모든 스토리에서 폭 조절 가능.
+    // (ColumnPager는 폭을 prop이 아니라 컨테이너에서 측정하므로 래퍼 폭으로 제어한다.)
+    (Story, context) => (
+      <div style={{ backgroundColor: '#b6b6b6', padding: 20, minHeight: '100vh' }}>
+        <div style={{ width: context.args.width ?? DEFAULT_WIDTH, margin: '0 auto' }}>
+          <Story />
+        </div>
       </div>
     ),
   ],
@@ -281,7 +294,7 @@ const SectionsDemo = () => {
 
 export const WithSections: Story = {
   name: 'SectionMark + 섹션 범위',
-  parameters: { controls: { disable: true } },
+  parameters: { controls: { include: ['width'] } },
   render: () => <SectionsDemo />,
 };
 
@@ -346,7 +359,7 @@ const StableGateDemo = () => {
 
 export const AsyncStableGate: Story = {
   name: 'StableGate (비동기 콘텐츠)',
-  parameters: { controls: { disable: true } },
+  parameters: { controls: { include: ['width'] } },
   render: () => <StableGateDemo />,
 };
 
@@ -427,7 +440,7 @@ const EditableDemo = () => {
 
 export const EditableContent: Story = {
   name: '데이터 편집 → 즉시 반영',
-  parameters: { controls: { disable: true } },
+  parameters: { controls: { include: ['width'] } },
   render: () => <EditableDemo />,
 };
 
@@ -497,18 +510,17 @@ const ShuffleDemo = () => {
 
 export const ShuffleOrder: Story = {
   name: '순서 섞기 → 재배치 속도',
-  parameters: { controls: { disable: true } },
+  parameters: { controls: { include: ['width'] } },
   render: () => <ShuffleDemo />,
 };
 
 /**
  * 넓이/높이 설정.
- * - 높이: `pageHeight` prop으로 직접 지정 (슬라이더).
- * - 넓이: prop이 아니라 컨테이너 폭에 반응 — 래퍼 폭을 슬라이더로 바꾸면
+ * - 넓이: prop이 아니라 컨테이너 폭에 반응 — 전역 `width` 슬라이더로 래퍼 폭을 바꾸면
  *   ResizeObserver가 감지(디바운스) 후 재페이지네이션.
+ * - 높이: `pageHeight` prop으로 직접 지정 (슬라이더).
  */
 type SizingArgs = {
-  width: number;
   pageHeight: number;
   columnCount: number;
   showDividers: boolean;
@@ -517,12 +529,8 @@ type SizingArgs = {
 
 export const PageSizing: StoryObj<SizingArgs> = {
   name: '넓이 / 높이 설정',
-  args: { width: 794, pageHeight: 1123, columnCount: 2, showDividers: true, itemGap: 16 },
+  args: { pageHeight: 1123, columnCount: 2, showDividers: true, itemGap: 16 },
   argTypes: {
-    width: {
-      control: { type: 'range', min: 360, max: 1200, step: 10 },
-      description: '컨테이너 폭(px)',
-    },
     pageHeight: {
       control: { type: 'range', min: 480, max: 1400, step: 20 },
       description: '페이지 높이(px)',
@@ -532,20 +540,18 @@ export const PageSizing: StoryObj<SizingArgs> = {
     itemGap: { control: { type: 'range', min: 0, max: 48, step: 2 } },
   },
   render: (args) => (
-    <div style={{ width: args.width }}>
-      <ColumnPager
-        columnCount={args.columnCount}
-        pageHeight={args.pageHeight}
-        showDividers={args.showDividers}
-        itemGap={args.itemGap}
-        columnGap={COLUMN_GAP}
-        bodyClassName={BODY_CLASS}
-        header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
-        footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
-      >
-        {renderCards(CARDS.slice(0, 24))}
-      </ColumnPager>
-    </div>
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageHeight={args.pageHeight}
+      showDividers={args.showDividers}
+      itemGap={args.itemGap}
+      columnGap={COLUMN_GAP}
+      bodyClassName={BODY_CLASS}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {renderCards(CARDS.slice(0, 24))}
+    </ColumnPager>
   ),
 };
 
@@ -907,17 +913,21 @@ export const TightFill: StoryObj<TightFillArgs> = {
 };
 
 /**
- * tightFill + KeepTogether — 빽빽하게 채우되 특정 카드는 잘리지 않게 보호.
+ * tightFill + KeepTogether — 큰 카드는 빽빽하게 잘려 채워지되, 카드 "안의 리스트"는 보호.
  *
- * tightFill로 컬럼을 채우면 경계 카드가 잘리는데, `ColumnPager.KeepTogether`로 감싼 카드는
- * break-inside: avoid라 잘리지 않고 통째로 다음 컬럼/페이지로 넘어간다(tightFill이 분할 대신
- * 통째 이동으로 폴백). "문서는 빽빽하게, 단 이 카드만은 온전하게" 같은 케이스.
+ * tightFill로 컬럼을 채우면 큰 카드가 잘려(slice) 컬럼/페이지 경계를 넘어 이어진다. 이때 카드 본문
+ * 안의 리스트를 `ColumnPager.KeepTogether`로 감싸면, 그 리스트만 break-inside: avoid라 라인 단위로
+ * 쪼개지지 않고 통째로 다음 컬럼으로 넘어간다. "카드는 잘려도, 리스트(표·코드블록 등)는 온전하게."
  *
- * (여기선 모든 카드를 KeepTogether로 감싸 tightFill을 켜도 카드가 안 잘리는 걸 보인다 — 윗쪽
- *  '여백 없이 채우기' 스토리는 감싸지 않아 잘려 채워지는 것과 비교.)
+ * 앞 카드 몇 장으로 컬럼을 일부 채운 뒤 큰 카드(본문 + 앰버 리스트)가 온다. tightFill 값을 올리면
+ * 큰 카드가 남은 공간부터 잘려 채워지지만, 앰버 리스트는 경계에 걸려도 통째로 다음 컬럼으로 넘어간다.
  */
+const KEEP_INTRO = TALL_CARD.lines.slice(0, 12);
+const KEEP_LIST = TALL_CARD.lines.slice(12, 18);
+const KEEP_OUTRO = TALL_CARD.lines.slice(18, 30);
+
 export const TightFillKeepTogether: StoryObj<TightFillArgs> = {
-  name: 'tightFill + KeepTogether (카드 보호)',
+  name: 'tightFill + KeepTogether (카드 속 리스트 보호)',
   args: {
     columnCount: 2,
     pageDirection: 'vertical',
@@ -928,7 +938,8 @@ export const TightFillKeepTogether: StoryObj<TightFillArgs> = {
   argTypes: {
     tightFill: {
       control: { type: 'range', min: 0, max: 400, step: 8 },
-      description: 'tightFill을 올려도 KeepTogether로 감싼 카드는 잘리지 않고 통째 이동.',
+      description:
+        'tightFill을 올리면 큰 카드는 잘려 채워지지만, 속 KeepTogether 리스트는 통째 이동.',
     },
   },
   render: (args) => (
@@ -943,12 +954,47 @@ export const TightFillKeepTogether: StoryObj<TightFillArgs> = {
       header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
       footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
     >
-      {CARDS.slice(0, 16).map((c) => (
-        // KeepTogether로 감싼 카드 → tightFill에도 잘리지 않고 통째 이동
-        <ColumnPager.KeepTogether key={c.number}>
-          <Card {...c} />
+      {/* 앞 카드들로 컬럼을 일부 채워 경계를 만든다 */}
+      {renderCards(CARDS.slice(0, 3))}
+
+      {/* 큰 카드: tightFill로 잘려 컬럼을 채우지만, 안의 앰버 리스트는 KeepTogether로 통째 유지 */}
+      <article className="flex flex-col gap-3 rounded-2xl bg-gray-100 p-7">
+        <span className="font-mono text-blue-600 text-sm font-medium tracking-wider">00</span>
+        <h3 className="text-2xl font-bold leading-tight text-blue-600">
+          tightFill로 잘리는 큰 카드
+        </h3>
+
+        <div className="flex flex-col gap-1.5">
+          {KEEP_INTRO.map((line, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: 정적 데모 본문 줄
+            <p key={`intro-${i}`} className="text-sm leading-relaxed text-gray-500">
+              {line}
+            </p>
+          ))}
+        </div>
+
+        {/* 이 리스트만 통째로 유지 — 라인 단위로 쪼개지지 않고 다음 컬럼으로 넘어간다 */}
+        <ColumnPager.KeepTogether className="flex flex-col gap-1 rounded-lg bg-amber-100 p-3">
+          <p className="font-medium text-amber-800 text-sm">KeepTogether 리스트 (통째 유지)</p>
+          {KEEP_LIST.map((line, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: 정적 데모 리스트 줄
+            <p key={`list-${i}`} className="text-amber-900 text-sm leading-relaxed">
+              {i + 1}. {line}
+            </p>
+          ))}
         </ColumnPager.KeepTogether>
-      ))}
+
+        <div className="flex flex-col gap-1.5">
+          {KEEP_OUTRO.map((line, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: 정적 데모 본문 줄
+            <p key={`outro-${i}`} className="text-sm leading-relaxed text-gray-500">
+              {line}
+            </p>
+          ))}
+        </div>
+      </article>
+
+      {renderCards(CARDS.slice(3, 8))}
     </ColumnPager>
   ),
 };
