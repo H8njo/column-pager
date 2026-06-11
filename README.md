@@ -89,6 +89,12 @@ export function Report({ items }) {
   <ColumnPager.StableGate stable={loaded}>             {/* 비동기 렌더 완료 게이트 */}
     <AsyncChart />
   </ColumnPager.StableGate>
+  <ColumnPager.Decorator className="border rounded p-4">  {/* 자식들을 같은 프레임으로 묶음 */}
+    <Card /><Card />
+  </ColumnPager.Decorator>
+  <ColumnPager.KeepTogether>                            {/* 경계에서 쪼개지 않고 통째로 */}
+    <Table />
+  </ColumnPager.KeepTogether>
 </ColumnPager>
 ```
 
@@ -112,7 +118,7 @@ HTML을 완전한 문서로 감싸 PDF로 만드는 것 등은 **소비자 몫**
 
 ```ts
 import {
-  ColumnPager,          // 메인 컴포넌트 (+ .PageBreak / .ColumnBreak / .SectionMark / .StableGate)
+  ColumnPager,          // 메인 컴포넌트 (+ .PageBreak / .ColumnBreak / .SectionMark / .StableGate / .Decorator / .KeepTogether)
   isSliced,             // placement가 슬라이스 조각인지
   getPageCount,         // 총 페이지 수
   findItemPage,         // 특정 아이템이 처음 등장하는 페이지(1-base)
@@ -120,8 +126,8 @@ import {
 } from 'column-pager';
 
 import type {
-  ColumnPagerProps, PageInfo,
-  PageBreakProps, SectionMarkProps, StableGateProps,
+  ColumnPagerProps, PageInfo, RenderItemInfo,
+  PageBreakProps, SectionMarkProps, StableGateProps, DecoratorProps, KeepTogetherProps,
   Page, Column, Placement, Slice, Size, SectionPageRanges,
 } from 'column-pager';
 ```
