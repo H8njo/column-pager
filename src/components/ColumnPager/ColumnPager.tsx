@@ -7,6 +7,7 @@ import { DEFAULT_PAGE_HEIGHT } from './components/PageSheet';
 import SliceView from './components/SliceView';
 import ColumnBreak from './controls/ColumnBreak';
 import Decorator from './controls/Decorator';
+import KeepTogether from './controls/KeepTogether';
 import PageBreak from './controls/PageBreak';
 import SectionMark from './controls/SectionMark';
 import StableGate from './controls/StableGate';
@@ -377,4 +378,5 @@ export default Object.assign(ColumnPager, {
   SectionMark,
   StableGate,
   Decorator,
+  KeepTogether,
 });

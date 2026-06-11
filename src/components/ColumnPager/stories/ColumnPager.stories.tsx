@@ -905,3 +905,98 @@ export const TightFill: StoryObj<TightFillArgs> = {
     </ColumnPager>
   ),
 };
+
+/**
+ * tightFill + KeepTogether — 빽빽하게 채우되 특정 카드는 잘리지 않게 보호.
+ *
+ * tightFill로 컬럼을 채우면 경계 카드가 잘리는데, `ColumnPager.KeepTogether`로 감싼 카드는
+ * break-inside: avoid라 잘리지 않고 통째로 다음 컬럼/페이지로 넘어간다(tightFill이 분할 대신
+ * 통째 이동으로 폴백). "문서는 빽빽하게, 단 이 카드만은 온전하게" 같은 케이스.
+ *
+ * (여기선 모든 카드를 KeepTogether로 감싸 tightFill을 켜도 카드가 안 잘리는 걸 보인다 — 윗쪽
+ *  '여백 없이 채우기' 스토리는 감싸지 않아 잘려 채워지는 것과 비교.)
+ */
+export const TightFillKeepTogether: StoryObj<TightFillArgs> = {
+  name: 'tightFill + KeepTogether (카드 보호)',
+  args: {
+    columnCount: 2,
+    pageDirection: 'vertical',
+    showDividers: true,
+    itemGap: 16,
+    tightFill: 8,
+  },
+  argTypes: {
+    tightFill: {
+      control: { type: 'range', min: 0, max: 400, step: 8 },
+      description: 'tightFill을 올려도 KeepTogether로 감싼 카드는 잘리지 않고 통째 이동.',
+    },
+  },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageDirection={args.pageDirection}
+      showDividers={args.showDividers}
+      itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
+      tightFill={args.tightFill}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {CARDS.slice(0, 16).map((c) => (
+        // KeepTogether로 감싼 카드 → tightFill에도 잘리지 않고 통째 이동
+        <ColumnPager.KeepTogether key={c.number}>
+          <Card {...c} />
+        </ColumnPager.KeepTogether>
+      ))}
+    </ColumnPager>
+  ),
+};
+
+// break-inside 검증용 콘텐츠 (faker, 결정적)
+const BREAK_PARA = Array.from({ length: 32 }, () =>
+  faker.lorem.sentence({ min: 10, max: 18 }),
+).join(' ');
+const BREAK_LIST = Array.from(
+  { length: 8 },
+  (_, i) => `${i + 1}. ${faker.lorem.sentence({ min: 6, max: 12 })}`,
+);
+
+/**
+ * break-inside — 한 아이템 안에서 "라인별 분할"과 "통째 분할"을 섞기.
+ *
+ * 슬라이싱은 CSS multicol 기반이라 브라우저의 `break-inside`를 그대로 존중한다.
+ * - 일반 `<p>`: 속성 없음 → 라인 단위로 컬럼/페이지를 넘어 흐른다.
+ * - `ColumnPager.KeepTogether`로 감싼 박스(여기선 앰버 리스트): 라인별로 안 쪼개지고 통째로
+ *   다음 컬럼으로 넘어간다(break-inside: avoid). 리스트/표/코드블록처럼 묶여야 하는 것에.
+ */
+export const BreakInsideControl: Story = {
+  name: 'break-inside (라인 분할 vs 통째)',
+  args: { columnCount: 2, pageDirection: 'vertical', showDividers: true, itemGap: 16 },
+  render: (args) => (
+    <ColumnPager
+      columnCount={args.columnCount}
+      pageDirection={args.pageDirection}
+      showDividers={args.showDividers}
+      itemGap={args.itemGap}
+      columnGap={args.columnGap}
+      bodyClassName={args.bodyClassName}
+      header={({ pageNumber }) => <SampleHeader pageNumber={pageNumber} />}
+      footer={({ pageNumber }) => <SampleFooter pageNumber={pageNumber} />}
+    >
+      {/* 한 아이템(큰 블록) → 슬라이스됨. 안의 <p>는 라인별, 앰버 리스트는 통째. */}
+      <div className="text-sm leading-relaxed text-gray-700">
+        <p className="mb-3">{BREAK_PARA}</p>
+        <ColumnPager.KeepTogether className="rounded-lg bg-amber-100 p-3">
+          <p className="mb-1 font-medium text-amber-800">KeepTogether 리스트 (통째)</p>
+          {BREAK_LIST.map((line) => (
+            <p key={line} className="text-amber-900">
+              {line}
+            </p>
+          ))}
+        </ColumnPager.KeepTogether>
+        <p className="mt-3">{BREAK_PARA}</p>
+      </div>
+    </ColumnPager>
+  ),
+};
