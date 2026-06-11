@@ -20,6 +20,12 @@ export type ContentBlock = {
    * 측정 캐시 키 + 재페이지네이션 트리거에 재사용해 트리 중복 순회를 막는다.
    */
   signature?: string;
+  /**
+   * 소비자 child의 React key (있으면). 순서가 바뀌어도 동일 아이템을 추적하는
+   * "안정적 정체성"으로, 렌더 시 셀 key 및 layout 애니메이션(framer-motion 등)
+   * 식별자로 쓰인다. key가 없으면 undefined → 위치 기반 인덱스로 폴백.
+   */
+  id?: string;
 };
 
 /** 강제 페이지 넘김 (+선택적 columnCount 변경) */
@@ -122,4 +128,19 @@ export type Page = Column[];
 export type PaginateOptions = {
   /** 컬럼 높이를 초과하는 아이템을 (자르지 않고) 다음 컬럼으로 먼저 이동 */
   moveOversizedItemToNextColumn?: boolean;
+  /**
+   * 같은 컬럼 안 아이템 사이 세로 간격(px). 컬럼 첫 아이템 위에는 적용되지 않는다
+   * (= flex-col gap 시맨틱). 누적 높이 계산에 반영되어 렌더(Column의 flex gap)와 일치한다.
+   */
+  itemGap?: number;
+  /**
+   * 컬럼을 빽빽하게 채우는 "최소 여백(px) 임계값". 경계에 걸친 아이템(남은 공간보다 큰)을 잘라
+   * (column-count) 남은 공간부터 채우고 다음 컬럼/페이지로 이어 분할한다.
+   * - falsy(0/미지정): 분할 안 함 — 경계 아이템은 통째 다음 컬럼/페이지로(여백 허용, box 보존).
+   * - N(px): 남은 공간이 N보다 클 때만 잘라 채운다(작은 여백은 통째 — 얇은 조각 방지). 작게(예: 1)
+   *   주면 사실상 항상 채움.
+   * 분할 시 카드 box는 경계에서 잘려 보일 수 있고, multicol이 못 쪼개는 원자적 박스(inline-block
+   * 등)는 통째 이동으로 폴백한다. (컬럼 높이 자체보다 큰 아이템은 이 옵션과 무관하게 항상 분할.)
+   */
+  tightFill?: number;
 };

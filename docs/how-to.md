@@ -1,51 +1,49 @@
-# How-to — 작업별 레시피
+# How-to — task recipes
 
-특정 작업을 어떻게 하는지. ColumnPager 기본 사용법을 안다고 가정한다(모르면 [튜토리얼](tutorial.md) 먼저).
-전체 prop/타입은 [레퍼런스](reference.md), 원리는 [설명](explanation.md).
+How to do specific tasks. Assumes you know the basics of ColumnPager (if not, start with the [tutorial](tutorial.md)).
+For all props/types see the [reference](reference.md); for the why, the [explanation](explanation.md).
 
-모든 예제는 `import { ColumnPager } from 'column-pager';`를 전제한다.
+Every example assumes `import { ColumnPager } from 'column-pager';`.
 
-## 페이지/컬럼을 강제로 넘기기
+## Force a page/column break
 
-`ColumnPager.PageBreak` / `ColumnPager.ColumnBreak`를 children 사이에 끼운다.
+Interleave `ColumnPager.PageBreak` / `ColumnPager.ColumnBreak` between children.
 
 ```tsx
 <ColumnPager columnCount={2}>
   <Card a />
-  <ColumnPager.ColumnBreak />   {/* 다음 컬럼으로 (마지막 컬럼이면 다음 페이지) */}
+  <ColumnPager.ColumnBreak />   {/* next column (next page if on the last column) */}
   <Card b />
-  <ColumnPager.PageBreak />     {/* 무조건 다음 페이지로 */}
+  <ColumnPager.PageBreak />     {/* always the next page */}
   <Card c />
 </ColumnPager>
 ```
 
-### 페이지마다 컬럼 수 바꾸기
+### Change the column count per page
 
-`PageBreak`의 `changeColumnCountTo`로 그 넘김 이후 페이지의 컬럼 수를 바꾼다.
+Use `PageBreak`'s `changeColumnCountTo` to change the column count of pages after that break.
 
 ```tsx
 <ColumnPager columnCount={1}>
-  <Cover />                                           {/* 1컬럼 표지 */}
+  <Cover />                                           {/* 1-column cover */}
   <ColumnPager.PageBreak changeColumnCountTo={2} />
-  {body.map((b) => <Card key={b.id} {...b} />)}       {/* 2컬럼 본문 */}
+  {body.map((b) => <Card key={b.id} {...b} />)}       {/* 2-column body */}
   <ColumnPager.PageBreak changeColumnCountTo={3} />
-  {appendix.map((a) => <Card key={a.id} {...a} />)}   {/* 3컬럼 부록 */}
+  {appendix.map((a) => <Card key={a.id} {...a} />)}   {/* 3-column appendix */}
 </ColumnPager>
 ```
 
-**검증:** 각 페이지 폭은 그대로지만 컬럼 수가 1→2→3으로 바뀌고, 컬럼 수가 바뀐 페이지의 콘텐츠는
-새 컬럼 폭으로 다시 측정된다.
+**Verify:** each page keeps its width, but the column count changes 1 → 2 → 3, and content on a page whose column count changed is re-measured at the new column width.
 
-## 페이지마다 다른 헤더·푸터 (높이 달라도 됨)
+## Different headers/footers per page (heights may differ)
 
-`header`/`footer`는 `pageNumber`를 받는 함수다. 분기만 하면 된다. 각 페이지의 컬럼 높이는 그 페이지의
-헤더+푸터 높이를 빼고 측정되므로, chrome이 큰 페이지엔 아이템이 적게 들어간다(자동 반영).
+`header`/`footer` are functions that receive `pageNumber`. Just branch. Each page's column height is measured with that page's header + footer subtracted, so pages with taller chrome fit fewer items (handled automatically).
 
 ```tsx
 <ColumnPager
   columnCount={2}
   header={({ pageNumber }) => {
-    if (pageNumber === 1) return <CoverHeader />;            // 첫 페이지: 키 큰 커버
+    if (pageNumber === 1) return <CoverHeader />;            // first page: tall cover
     return pageNumber % 2 === 1 ? <OddHeader p={pageNumber} /> : <EvenHeader p={pageNumber} />;
   }}
   footer={({ pageNumber }) => (pageNumber === 1 ? <CoverFooter /> : <SmallFooter p={pageNumber} />)}
@@ -54,14 +52,97 @@
 </ColumnPager>
 ```
 
-> "총 N쪽 중 n쪽"처럼 **마지막 페이지 번호**가 필요한 헤더는 단일 패스로는 안 된다([설명](explanation.md)의
-> 트레이드오프 참고). 첫/홀수/짝수 분기는 문제없이 동작한다.
+> A header that needs the **last page number** (e.g. "page n of N") cannot be done in a single pass (see the trade-offs in the [explanation](explanation.md)). First/odd/even branching works fine.
 
-## 비동기 콘텐츠가 다 그려진 뒤에 내보내기
+## Space items without spacer elements (`itemGap`)
 
-이미지나 원격 데이터로 높이가 나중에 정해지는 콘텐츠는 `ColumnPager.StableGate`로 감싸고, 준비되면
-`stable={true}`로 알린다. ColumnPager는 모든 게이트가 stable일 때까지 `onPagesGenerated` emit을
-미룬다(무한 대기 방지용 `stableTimeoutMs` 폴백 있음).
+Set vertical spacing between items with `itemGap` instead of margins or spacer `<div>`s. The gap goes **only between items in a column** (never above the first item in a column), and it is reflected in both the pagination height math and the rendered flex gap, so they never drift.
+
+```tsx
+<ColumnPager columnCount={2} itemGap={16} columnGap={40} bodyClassName="px-8 py-5">
+  {cards.map((c) => <Card key={c.id} {...c} />)}   {/* no margins/spacers needed */}
+</ColumnPager>
+```
+
+- `columnGap` — horizontal gap between columns (px).
+- `bodyClassName` — class for the box around the columns (use for page padding).
+
+## Pack columns tight, slicing boundary items (`tightFill`)
+
+By default a card that does not fit the leftover space moves whole to the next column, leaving a gap at the bottom. With `tightFill`, a boundary card is sliced to fill the leftover space and continued into the next column/page.
+
+```tsx
+<ColumnPager columnCount={2} tightFill={8}>
+  {cards.map((c) => <Card key={c.id} {...c} />)}
+</ColumnPager>
+```
+
+- `0`/unset: no slicing — boundary items move whole (gaps allowed, boxes preserved).
+- `N` (px): slice only when the leftover exceeds `N` (small leftovers move whole, to avoid thin slivers). A small value (e.g. `1`) means "almost always fill".
+- Atomic boxes that CSS multi-column cannot split (e.g. `inline-block`) fall back to moving whole.
+
+> Items taller than the column itself are always sliced, regardless of `tightFill`.
+
+## Keep a block from being split (`KeepTogether`)
+
+Lists, tables, code blocks, and image captions should travel together. Wrap them in `ColumnPager.KeepTogether` so they are not split line-by-line at a boundary — they move whole to the next column/page (via `break-inside: avoid`).
+
+```tsx
+<ColumnPager columnCount={2} tightFill={8}>
+  <article>
+    <p>{intro}</p>
+    <ColumnPager.KeepTogether className="rounded bg-amber-50 p-3">
+      <ul>{items.map((i) => <li key={i}>{i}</li>)}</ul>
+    </ColumnPager.KeepTogether>
+    <p>{outro}</p>
+  </article>
+</ColumnPager>
+```
+
+> If the kept-together content is taller than a column, avoidance is impossible and the browser splits it anyway.
+
+## Wrap a group in one shared frame (`Decorator`)
+
+To give several items the same frame (border/background/padding) while they still flow independently across columns/pages, wrap them in `ColumnPager.Decorator`. The wrapper is not rendered as a box; its `className` is propagated to each child cell, and the frame's padding/border height is measured and factored into slice math.
+
+```tsx
+<ColumnPager columnCount={2}>
+  <ColumnPager.Decorator className="rounded-2xl bg-indigo-50 p-6">
+    {section.map((s) => <Card key={s.id} {...s} />)}
+  </ColumnPager.Decorator>
+</ColumnPager>
+```
+
+## Animate items on reorder/move (`renderItem`)
+
+`renderItem` wraps each placed cell. The library does not depend on framer-motion — you return your own `motion.div`. A stable identity (`info.id`) comes from the React `key` on each child, so the same item keeps the same identity when the order changes and the animation reads it as a move. Set `clipOverflow={false}` so a moving cell is not clipped by the column box.
+
+```tsx
+import { LayoutGroup, motion } from 'framer-motion';
+
+<LayoutGroup>
+  <ColumnPager
+    columnCount={2}
+    clipOverflow={false}
+    renderItem={({ id, sliced, pageNumber, children }) => {
+      if (!id || sliced) return children; // slices have no 1:1 identity
+      return (
+        <motion.div layout layoutId={`${id}-p${pageNumber}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          {children}
+        </motion.div>
+      );
+    }}
+  >
+    {order.map((card) => <Card key={card.id} {...card} />)}
+  </ColumnPager>
+</LayoutGroup>
+```
+
+> Re-pagination after measurement is async, so moves that cross a page boundary may lag or jump slightly. Same-column reorders are the smoothest (see the [explanation](explanation.md)).
+
+## Emit only after async content has rendered
+
+Content whose height is decided later (images, remote data) should be wrapped in `ColumnPager.StableGate`, and you signal readiness with `stable={true}`. ColumnPager defers `onPagesGenerated` until every gate is stable (with a `stableTimeoutMs` fallback to avoid waiting forever).
 
 ```tsx
 function Report() {
@@ -78,17 +159,15 @@ function Report() {
 }
 ```
 
-**검증:** 로드 전엔 emit이 안 일어나고, `loaded`가 `true`가 돼 게이트가 settle되면 그때 한 번 emit된다.
-로드 전후로 페이지 수가 달라질 수 있다.
+**Verify:** no emission before load; once `loaded` is `true` and the gate settles, it emits once. The page count may differ before and after the load.
 
-## 렌더된 HTML 내보내기 (PDF 등)
+## Export rendered HTML (PDF, etc.)
 
-`onPagesGenerated`의 둘째 인자가 렌더된 컨테이너 `outerHTML`이다. 라이브러리는 **렌더 결과만** 준다.
-완전한 문서로 감싸 PDF로 만드는 변환은 소비자가 한다. 화면에 안 띄우고 측정/emit만 하려면 `hidden`.
+The second argument to `onPagesGenerated` is the rendered container `outerHTML`. The library gives you **only the rendered result** — wrapping it into a full document for PDF is the consumer's job. Use `hidden` to measure and emit without showing anything on screen.
 
 ```tsx
 function toDocument(bodyHtml: string): string {
-  // 현재 페이지의 스타일시트를 인라인해 독립 문서로 만든다
+  // inline the current page's stylesheets into a standalone document
   const styles = Array.from(document.styleSheets)
     .map((s) => { try { return Array.from(s.cssRules).map((r) => r.cssText).join('\n'); } catch { return ''; } })
     .join('\n');
@@ -102,7 +181,7 @@ function PdfSource({ children }) {
       columnCount={2}
       onPagesGenerated={(_pages, html) => {
         const doc = toDocument(html);
-        // doc를 새 창/iframe/서버 PDF 변환기로 넘긴다
+        // send `doc` to a new window / iframe / server-side PDF converter
       }}
     >
       {children}
@@ -111,13 +190,11 @@ function PdfSource({ children }) {
 }
 ```
 
-> `hidden`을 써도 폭은 정상 측정된다(화면 밖이 아니라 높이 0으로 접어둔 형태). 측정이 0이 되어
-> emit이 영영 안 나오는 일은 없다.
+> `hidden` still measures width correctly (it collapses height to 0 rather than moving off-screen). Measurement never drops to 0 and stalls emission.
 
-## 섹션별 페이지 범위 뽑기 (목차)
+## Extract per-section page ranges (table of contents)
 
-`ColumnPager.SectionMark`로 콘텐츠를 섹션으로 나누고, `getSectionPageRanges`로 각 섹션의 페이지 범위를
-얻는다. 목차나 인덱스 생성에 쓴다.
+Divide content into sections with `ColumnPager.SectionMark`, then get each section's page range with `getSectionPageRanges`. Use it to build a table of contents or index.
 
 ```tsx
 import { ColumnPager, getSectionPageRanges } from 'column-pager';
@@ -138,12 +215,11 @@ function Workbook() {
 }
 ```
 
-특정 아이템이 몇 쪽에 처음 나오는지는 `findItemPage(pages, blockIndex)`로 얻는다.
+To find which page an item first appears on, use `findItemPage(pages, blockIndex)`.
 
-## 큰 아이템을 자르는 대신 다음 컬럼으로 보내기
+## Send a tall item to the next column instead of slicing
 
-컬럼 높이를 넘는 아이템이 이미 채워진 컬럼 중간에서 시작해 잘리는 게 싫으면
-`moveOversizedItemToNextColumn`을 켠다. 그 아이템을 빈 컬럼 맨 위로 보낸 뒤 슬라이스를 시작한다.
+If you do not want an item taller than the column to start mid-column and get sliced, turn on `moveOversizedItemToNextColumn`. It moves the item to the top of an empty column before slicing.
 
 ```tsx
 <ColumnPager columnCount={2} moveOversizedItemToNextColumn>
@@ -151,40 +227,35 @@ function Workbook() {
 </ColumnPager>
 ```
 
-## 페이지 높이 지정 / 폭 반응형 다루기
+## Set page height / handle responsive width
 
-높이는 `pageHeight`(px) prop. 폭은 prop이 아니라 **부모 컨테이너 폭**에 맞춰 반응형이다.
+Height is the `pageHeight` (px) prop. Width is not a prop — it is responsive to the **parent container's width**.
 
 ```tsx
-<div style={{ width: 794 }}>            {/* 폭은 이 래퍼가 결정 */}
-  <ColumnPager pageHeight={1123}>       {/* 높이만 지정 */}
+<div style={{ width: 794 }}>            {/* width is decided by this wrapper */}
+  <ColumnPager pageHeight={1123}>       {/* set height only */}
     {children}
   </ColumnPager>
 </div>
 ```
 
-리사이즈는 `resizeDebounceMs`(기본 150ms) 후 한 번 재페이지네이션한다.
+Resizing re-paginates once after `resizeDebounceMs` (default 150ms).
 
-### 슬라이스가 두 번 그려지는(translateX 점프) 현상 없애기
+### Remove the double-paint (translateX jump) on slices
 
-내용이 길어 세로 스크롤바가 뒤늦게 생기면 가용 폭이 줄어 재페이지네이션이 한 번 더 일어난다. 스크롤
-컨테이너에 거터를 미리 예약하면 사라진다.
+If content is long enough that a vertical scrollbar appears late, the available width shrinks and pagination runs once more. Reserve the gutter ahead of time on the scroll container to remove it.
 
 ```css
 html { scrollbar-gutter: stable; }
 ```
 
-## 트러블슈팅
+## Troubleshooting
 
-- **아무것도 안 보인다 / 페이지가 0개.** 컨테이너 폭이 0으로 측정되면 페이지네이션이 보류된다. 부모에
-  폭이 잡히는지, SSR로 서버에서 렌더 중은 아닌지 확인. 측정은 브라우저 레이아웃이 필요하다.
-- **스타일이 안 먹는다.** Tailwind content 스캔에 패키지를 포함했는지 확인(README의 설치 절). 클래스가
-  purge되면 레이아웃이 깨진다.
-- **`onPagesGenerated`가 안 불린다.** StableGate가 영영 stable이 안 되면 `stableTimeoutMs`까지 기다린
-  뒤 `onStableTimeout` 후 강제 emit된다. `stable`을 실제로 `true`로 만드는지 확인.
-- **편집 반영이 느리다.** 한 아이템만 바꾸면 그 아이템만 재측정된다. 카드 컴포넌트를 `React.memo`로
-  감싸면 안 바뀐 카드의 재렌더도 줄어든다.
+- **Nothing shows / zero pages.** If the container width measures as 0, pagination is deferred. Check that the parent has a width and that you are not rendering server-side (SSR). Measurement needs browser layout.
+- **Styles do not apply.** Confirm the package is in your Tailwind content scan (see the install section in the README). If classes are purged, the layout breaks.
+- **`onPagesGenerated` never fires.** If a StableGate never becomes stable, it waits up to `stableTimeoutMs`, then forces emission after `onStableTimeout`. Check that you actually set `stable` to `true`.
+- **Edits feel slow.** Editing one item re-measures only that item. Wrapping your card component in `React.memo` further reduces re-renders of unchanged cards.
 
-## 관련 문서
+## Related docs
 
-- [튜토리얼](tutorial.md) · [레퍼런스](reference.md) · [설명: 동작 원리](explanation.md)
+- [Tutorial](tutorial.md) · [Reference](reference.md) · [Explanation: how it works](explanation.md)

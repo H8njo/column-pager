@@ -1,22 +1,21 @@
-# Tutorial — 첫 멀티컬럼 문서 만들기
+# Tutorial — build your first multi-column document
 
-설치부터 시작해, 카드 목록을 2컬럼 페이지로 자동 분할하고, 페이지가 넘어가는 걸 직접 보고, 마지막엔
-섹션 목차까지 뽑는 동작하는 예제를 만든다. 끝나면 ColumnPager의 핵심 흐름을 이해하게 된다.
+Starting from install, you'll auto-paginate a list of cards into 2-column pages, watch pages wrap, and finally extract a section table of contents. By the end you'll understand ColumnPager's core flow.
 
-## 준비물
+## Prerequisites
 
-- React 18 또는 19 프로젝트 (Vite 등)
-- Tailwind CSS v3.4+ 또는 v4 설정 (ColumnPager는 레이아웃을 Tailwind 클래스로 그린다)
+- A React 18 or 19 project (Vite, etc.)
+- Tailwind CSS v3.4+ or v4 configured (ColumnPager draws its layout with Tailwind classes)
 
-## 1단계: 설치하고 Tailwind에 등록
+## Step 1: Install and register with Tailwind
 
 ```bash
 pnpm add column-pager
 ```
 
-ColumnPager의 클래스가 purge되지 않도록 Tailwind content 스캔에 패키지를 추가한다.
+Add the package to Tailwind's content scan so ColumnPager's classes are not purged.
 
-Tailwind v4 (CSS 파일):
+Tailwind v4 (CSS file):
 
 ```css
 @import 'tailwindcss';
@@ -31,25 +30,25 @@ export default {
 };
 ```
 
-## 2단계: 화면에 첫 페이지 띄우기
+## Step 2: Render your first page
 
-카드 몇 개를 ColumnPager에 넣는다. 폭은 부모(`width: 600`)가 정하고, 높이는 `pageHeight`로 준다.
+Put a few cards into ColumnPager. Width is decided by the parent (`width: 600`); height is given with `pageHeight`. Use `itemGap` for spacing between cards instead of margins.
 
 ```tsx
 import { ColumnPager } from 'column-pager';
 
 const CARDS = Array.from({ length: 12 }, (_, i) => ({
   id: i + 1,
-  title: `카드 ${i + 1}`,
-  body: '여기에 본문이 들어갑니다. '.repeat(8),
+  title: `Card ${i + 1}`,
+  body: 'Body text goes here. '.repeat(8),
 }));
 
 export function Demo() {
   return (
     <div style={{ width: 600 }}>
-      <ColumnPager columnCount={2} pageHeight={700} showDividers>
+      <ColumnPager columnCount={2} pageHeight={700} itemGap={16} showDividers>
         {CARDS.map((c) => (
-          <article key={c.id} className="mb-4 rounded border p-3">
+          <article key={c.id} className="rounded border p-3">
             <h3 className="font-bold">{c.title}</h3>
             <p className="text-sm text-gray-600">{c.body}</p>
           </article>
@@ -60,42 +59,39 @@ export function Demo() {
 }
 ```
 
-이 화면을 띄우면 카드들이 **2컬럼으로 채워지고, 700px를 넘으면 둘째 페이지가 자동으로 생긴다.**
-첫 결과가 여기서 바로 보인다. 카드 수를 늘리거나 `pageHeight`를 줄이면 페이지가 더 늘어난다.
+Render this and the cards **fill 2 columns, and a second page appears automatically once content exceeds 700px.** You see your first result right here. Add more cards or lower `pageHeight` to get more pages.
 
-> 아무것도 안 보이면: 부모 `div`에 폭이 잡혀 있는지, Tailwind에 패키지를 등록했는지 확인하라.
-> 측정은 실제 브라우저 레이아웃이 필요하다.
+> If nothing shows: check that the parent `div` has a width and that you registered the package with Tailwind. Measurement needs real browser layout.
 
-## 3단계: 헤더·푸터 붙이기
+## Step 3: Add a header and footer
 
-`header`/`footer`는 `pageNumber`를 받는 함수다. 페이지마다 호출된다.
+`header`/`footer` are functions that receive `pageNumber`. They are called per page.
 
 ```tsx
 <ColumnPager
   columnCount={2}
   pageHeight={700}
+  itemGap={16}
   showDividers
   header={({ pageNumber }) => (
     <div className="flex h-10 items-center justify-between border-b px-2 text-sm">
-      <span>내 문서</span>
-      <span>{pageNumber}쪽</span>
+      <span>My Document</span>
+      <span>p.{pageNumber}</span>
     </div>
   )}
   footer={({ pageNumber }) => (
     <div className="flex h-6 items-center justify-center text-xs text-gray-400">- {pageNumber} -</div>
   )}
 >
-  {/* ...카드... */}
+  {/* ...cards... */}
 </ColumnPager>
 ```
 
-이제 각 페이지에 머리말/꼬리말이 붙는다. 컬럼 높이는 헤더+푸터를 뺀 만큼으로 자동 계산돼, 한 컬럼에
-들어가는 카드 수가 그만큼 줄어든다.
+Now each page has a header/footer. The column height is computed with the header + footer subtracted, so fewer cards fit per column.
 
-## 4단계: 섹션으로 나누고 목차 뽑기
+## Step 4: Divide into sections and extract a table of contents
 
-`ColumnPager.SectionMark`로 콘텐츠를 섹션으로 나누고, `onPagesGenerated`에서 `getSectionPageRanges`로
-각 섹션이 몇 쪽에 걸치는지 얻는다.
+Divide content into sections with `ColumnPager.SectionMark`, then in `onPagesGenerated` get the page span of each section with `getSectionPageRanges`.
 
 ```tsx
 import { ColumnPager, getSectionPageRanges } from 'column-pager';
@@ -114,27 +110,26 @@ export function Workbook() {
         onPagesGenerated={(pages) => setToc(getSectionPageRanges(pages))}
       >
         <ColumnPager.SectionMark section="intro" />
-        {CARDS.slice(0, 6).map((c) => <article key={c.id} className="mb-4">{c.title}</article>)}
+        {CARDS.slice(0, 6).map((c) => <article key={c.id}>{c.title}</article>)}
 
         <ColumnPager.SectionMark section="appendix" />
-        {CARDS.slice(6).map((c) => <article key={c.id} className="mb-4">{c.title}</article>)}
+        {CARDS.slice(6).map((c) => <article key={c.id}>{c.title}</article>)}
       </ColumnPager>
     </div>
   );
 }
 ```
 
-`<pre>`에 `{"intro":[1,1],"appendix":[1,2]}` 같은 목차가 찍힌다(실제 값은 콘텐츠 양에 따라 다름).
-페이지네이션이 끝날 때마다 `onPagesGenerated`가 불려 목차가 갱신된다.
+The `<pre>` prints a TOC like `{"intro":[1,1],"appendix":[1,2]}` (actual values depend on content volume). `onPagesGenerated` fires whenever pagination finishes, keeping the TOC in sync.
 
-## 만든 것
+## What you built
 
-- 카드 목록을 2컬럼 × 고정 높이 페이지로 자동 분할했고,
-- 페이지마다 헤더·푸터를 붙였고,
-- 섹션을 나눠 페이지 범위(목차)를 뽑았다.
+- Auto-split a list of cards into 2-column, fixed-height pages,
+- added a header/footer per page,
+- and divided content into sections to extract page ranges (a TOC).
 
-여기서 더 나아가려면:
+To go further:
 
-- 강제 페이지/컬럼 넘김, 컬럼 수 변경, 비동기 콘텐츠, HTML/PDF 내보내기 → [How-to](how-to.md)
-- 모든 prop·타입·유틸 → [레퍼런스](reference.md)
-- 측정·슬라이스·반응형이 동작하는 원리 → [설명](explanation.md)
+- Forced page/column breaks, per-page column counts, tight fill, keep-together, layout animation, async content, HTML/PDF export → [How-to](how-to.md)
+- Every prop, type, and utility → [Reference](reference.md)
+- How measurement, slicing, and responsiveness work → [Explanation](explanation.md)

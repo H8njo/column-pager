@@ -146,6 +146,60 @@ describe('paginate — 큰 아이템: 이어받기(carry) / 다음 컬럼 이동
   });
 });
 
+describe('paginate — tightFill (경계: 통째 이동 vs 잘라 채움)', () => {
+  it('falsy(기본): 남은 공간에 안 들어가는 아이템은 통째 다음 컬럼/페이지로(분할 안 함)', async () => {
+    const blocks = [item(200), item(100)]; // columnHeight 250, 1컬럼: 남은 50 < 100
+    const placements = await paginate(blocks, 1, fakeMeasurer(250));
+
+    expect(placements).toHaveLength(2); // 슬라이스 없음
+    expect(placements.map((p) => p.pageIndex)).toEqual([0, 1]);
+    expect(placements.every((p) => !p.slice)).toBe(true);
+  });
+
+  it('tightFill>0 + 남은 공간이 임계값 초과: 남은 공간부터 채우고 다음 컬럼/페이지로 분할', async () => {
+    const blocks = [
+      item(200),
+      item(100, { flowWidth: 600, sliceWidth: 300, contentEnd: 50 }), // count=2
+    ];
+    // 남은 50 > tightFill 10 → 분할
+    const placements = await paginate(blocks, 1, fakeMeasurer(250), { tightFill: 10 });
+
+    expect(placements).toHaveLength(3);
+    expect(placements[0]).toMatchObject({ blockIndex: 0, pageIndex: 0 });
+    expect(placements[1]).toMatchObject({ blockIndex: 1, pageIndex: 0 });
+    expect(placements[1].slice).toMatchObject({ index: 0, count: 2, clipHeight: 50 });
+    expect(placements[2]).toMatchObject({ blockIndex: 1, pageIndex: 1 });
+    expect(placements[2].slice).toMatchObject({ index: 1, count: 2 });
+  });
+
+  it('tightFill 이하의 남은 공간은 분할하지 않고 통째 다음 컬럼으로(임계값)', async () => {
+    // 남은 50 ≤ tightFill 80 → 분할 안 함
+    const blocks = [item(200), item(100, { flowWidth: 600, sliceWidth: 300, contentEnd: 50 })];
+    const placements = await paginate(blocks, 1, fakeMeasurer(250), { tightFill: 80 });
+
+    expect(placements).toHaveLength(2); // 슬라이스 없이 통째
+    expect(placements.map((p) => p.pageIndex)).toEqual([0, 1]);
+    expect(placements.every((p) => !p.slice)).toBe(true);
+  });
+
+  it('falsy여도 컬럼 높이보다 큰 아이템은 옵션과 무관하게 항상 분할', async () => {
+    const blocks = [item(1500, { flowWidth: 900, sliceWidth: 300, contentEnd: 500 })];
+    const placements = await paginate(blocks, 1, fakeMeasurer(500), { tightFill: 0 });
+    expect(placements).toHaveLength(3);
+    expect(placements.every((p) => p.slice)).toBe(true);
+  });
+
+  it('tightFill>0 + 분할 불가(원자적, count<=1) 콘텐츠는 통째 다음 컬럼으로 폴백', async () => {
+    // 남은 50이지만 multicol이 못 쪼갬(flowWidth=sliceWidth → count=1). inline-block 등.
+    const blocks = [item(200), item(100, { flowWidth: 300, sliceWidth: 300, contentEnd: 100 })];
+    const placements = await paginate(blocks, 1, fakeMeasurer(250), { tightFill: 10 });
+
+    expect(placements).toHaveLength(2); // 슬라이스 없이 통째
+    expect(placements[1]).toMatchObject({ blockIndex: 1, pageIndex: 1 });
+    expect(placements[1].slice).toBeUndefined();
+  });
+});
+
 describe('paginate — 입력 방어', () => {
   it('빈 입력 → [] (measurer 측정 없이)', async () => {
     let measured = false;

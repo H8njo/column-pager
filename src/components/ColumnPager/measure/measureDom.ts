@@ -1,5 +1,6 @@
 import { createElement, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { cn } from '../../../lib/utils';
 import ItemCell from '../components/ItemCell';
 import { KEY, keySelector } from '../components/keys';
 import Page from '../components/Page';
@@ -24,6 +25,10 @@ export type MeasurerConfig = {
   containerWidth?: number;
   /** 페이지 높이(px) */
   pageHeight?: number;
+  /** 컬럼 사이 가로 간격(px) — 컬럼 폭에 영향 → 측정에 반드시 반영 */
+  columnGap?: number;
+  /** 본문 영역 클래스(패딩 등) — 컬럼 폭에 영향 → 측정에 반드시 반영 */
+  bodyClassName?: string;
 };
 
 const chunk = <T>(arr: readonly T[], size: number): T[][] => {
@@ -49,6 +54,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
     chunkSize = 30,
     containerWidth,
     pageHeight,
+    columnGap,
+    bodyClassName,
   } = config;
 
   const columnBoxCache = new Map<string, Size>();
@@ -84,6 +91,8 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
             showDividers,
             columnClassName,
             pageHeight,
+            columnGap,
+            bodyClassName,
           }),
         ],
         'layout',
@@ -232,10 +241,17 @@ export const createDomMeasurer = (config: MeasurerConfig = {}): Measurer => {
         container.appendChild(wrapper);
         root = createRoot(wrapper);
 
-        // V1 measureElementSize 구조 재현: CELL/INNER height 100%, 앞에 carry 스페이서
+        // V1 measureElementSize 구조 재현: CELL/INNER height 100%, 앞에 carry 스페이서.
+        // decoratorClassName(테두리/패딩)을 셀에 적용해야 렌더(SliceView)와 동일한 padded
+        // 지오메트리가 된다 — 안 그러면 CELL_INNER 폭(sliceWidth)이 가로 패딩만큼 넓게 측정돼
+        // shiftX(= index*sliceWidth)가 과대 계산되어 슬라이스가 가로로 잘린다.
         const tree = createElement(
           'div',
-          { 'data-cp': KEY.CELL, className: 'flex overflow-hidden', style: { height: '100%' } },
+          {
+            'data-cp': KEY.CELL,
+            className: cn('flex overflow-hidden', block.decoratorClassName),
+            style: { height: '100%' },
+          },
           createElement(
             'div',
             {

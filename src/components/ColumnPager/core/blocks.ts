@@ -16,7 +16,7 @@ import type { Block, ContentBlock } from './types';
  */
 export const CP_CONTROL = '__cpControl' as const;
 
-export type ControlKind = 'pageBreak' | 'columnBreak' | 'sectionMark';
+export type ControlKind = 'pageBreak' | 'columnBreak' | 'sectionMark' | 'decorator';
 
 /** 컨트롤 컴포넌트에 마커를 부착 (controls/ 에서 사용) */
 export const markControl = <T extends object>(component: T, kind: ControlKind): T => {
@@ -42,6 +42,9 @@ const content = (node: ReactNode, extra: Partial<ContentBlock> = {}): ContentBlo
   // 블록 생성 시 노드 시그니처를 1회 계산해 부착 → 측정 캐시 키/재계산 트리거에서 재사용
   // (measureItems마다, 그리고 usePagination 렌더마다 다시 트리를 순회하던 비용 제거).
   signature: blocksSignature(node),
+  // 소비자가 element에 부여한 key를 안정적 정체성으로 보관(순서 변경 추적/layout 애니메이션용).
+  // element가 아니거나 key가 없으면 undefined.
+  id: isValidElement(node) && node.key != null ? String(node.key) : undefined,
   ...extra,
 });
 
@@ -98,6 +101,11 @@ export const toBlocks = (children: ReactNode): Block[] => {
       if (kind === 'sectionMark') {
         const props = child.props as { section: string };
         blocks.push({ kind: 'sectionMark', section: props.section });
+        return;
+      }
+      if (kind === 'decorator') {
+        // ColumnPager.Decorator — 타입 마커로 인식해 프레임 그룹을 푼다.
+        pushDecorator(child);
         return;
       }
 

@@ -53,7 +53,8 @@ export const paginate = async (
   measurer: Measurer,
   options: PaginateOptions = {},
 ): Promise<Placement[]> => {
-  const { moveOversizedItemToNextColumn = false } = options;
+  // tightFill(px): falsy=분할 안 함 / N=남은 공간이 N px 초과일 때만 잘라 채움.
+  const { moveOversizedItemToNextColumn = false, itemGap = 0, tightFill = 0 } = options;
   const contentBlocks = contentBlocksOf(blocks);
 
   const cursor: Cursor = {
@@ -117,16 +118,32 @@ export const paginate = async (
       continue;
     }
 
-    // ---- 큰 아이템: 슬라이스 분할 ----
-    if (itemHeight > columnHeight) {
-      const remainingHeight = columnHeight - cursor.filledHeight;
+    // 컬럼에 이미 내용이 있으면 아이템 앞에 gap → 분할/배치가 gap만큼 아래에서 시작.
+    const gapBefore = cursor.filledHeight > 0 ? itemGap : 0;
+    const startFilled = cursor.filledHeight + gapBefore;
+    const remainingHeight = columnHeight - startFilled;
+
+    // ---- 분할(슬라이스) 트리거 (단일 메커니즘) ----
+    // - tooTallForColumn: 컬럼 높이 자체를 넘는 아이템 → 어느 컬럼에도 안 들어가므로 무조건 분할.
+    // - splitToFill: 남은 공간만 넘고(컬럼엔 들어감) tightFill이 켜져(임계값 초과) 있으면
+    //   "통째 이동" 대신 남은 공간부터 채우고 다음 컬럼으로 이어 분할(긴 지문처럼).
+    const tooTallForColumn = itemHeight > columnHeight;
+    // tightFill: 경계(남은 공간보다 큼) + 남은 공간이 tightFill px 초과면 잘라 채운다.
+    const splitToFill =
+      tightFill > 0 && itemHeight > remainingHeight && remainingHeight > tightFill;
+
+    if (tooTallForColumn || splitToFill) {
+      // advance(다음 컬럼 맨 위에서 시작)는 "컬럼보다 큰" 아이템 전용 가드(moveOversized 또는
+      // 5% 슬리버). splitToFill은 tightFill 임계값이 이미 게이트하므로 advance 없이 남은 공간을 채운다.
       const advancing =
         cursor.filledHeight > 0 &&
+        tooTallForColumn &&
         (moveOversizedItemToNextColumn || remainingHeight < columnHeight * 0.05);
 
       if (advancing) advanceColumn(cursor);
 
-      const carry = advancing ? 0 : cursor.filledHeight;
+      // 새 컬럼으로 넘어가면(advancing) 컬럼 맨 위라 gap 없음(carry 0).
+      const carry = advancing ? 0 : startFilled;
       const overflow = await measurer.measureOverflow(
         contentBlocks[blockIndex],
         measure.container.width,
@@ -135,7 +152,24 @@ export const paginate = async (
       );
       const paddingHeight = (measure.decoratorHeight ?? 0) / 2;
       const count = sliceCount(overflow.flowWidth, overflow.sliceWidth);
-      const firstClip = firstSliceClip(columnHeight, cursor.filledHeight, advancing);
+
+      // 분할-채우기인데 multicol이 못 쪼갠 경우(count<=1) — 원자적 박스(inline-block 등)는
+      // CSS multicol로 가로-흐름 분할이 불가하다. 컬럼엔 들어가는 크기이므로 통째 다음 컬럼으로
+      // 폴백(누적 오버플로 방지). (advancing이면 이미 다음 컬럼 맨 위로 이동된 상태.)
+      if (splitToFill && count <= 1) {
+        if (!advancing) advanceColumn(cursor);
+        cursor.filledHeight = itemHeight;
+        placements.push({
+          blockIndex,
+          pageIndex: cursor.pageIndex,
+          columnIndex: cursor.columnIndex,
+          columnCount: cursor.columnCount,
+          section,
+        });
+        continue;
+      }
+
+      const firstClip = firstSliceClip(columnHeight, carry, advancing);
 
       for (let idx = 0; idx < count; idx++) {
         const isFirst = idx === 0;
@@ -177,11 +211,13 @@ export const paginate = async (
       continue;
     }
 
-    // ---- 일반 아이템: 누적 후 넘치면 다음 컬럼 ----
-    cursor.filledHeight += itemHeight;
+    // ---- 일반 아이템: 통째 배치 ----
+    // 여기 오는 경우: (a) 남은 공간에 들어감, 또는 (b) tightFill 미적용(또는 임계값 이하)이라
+    // 안 들어가면 통째 다음 컬럼으로(분할 안 함). 컬럼은 절대 넘치지 않는다.
+    cursor.filledHeight += gapBefore + itemHeight;
     if (cursor.filledHeight > columnHeight) {
       advanceColumn(cursor);
-      cursor.filledHeight = itemHeight;
+      cursor.filledHeight = itemHeight; // 새 컬럼 첫 아이템 → 앞 gap 없음
     }
 
     placements.push({
