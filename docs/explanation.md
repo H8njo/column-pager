@@ -1,89 +1,72 @@
-# Explanation — 페이지네이션이 동작하는 원리
+# Explanation — how pagination works
 
-ColumnPager가 왜 이렇게 설계됐는지. API 사용법이 아니라 내부 모델과 트레이드오프를 다룬다.
-사용법은 [레퍼런스](reference.md)와 [How-to](how-to.md)를 보라.
+Why ColumnPager is designed the way it is. This covers the internal model and trade-offs, not API usage.
+For usage see the [reference](reference.md) and [how-to](how-to.md).
 
-## 문제
+## The problem
 
-"임의의 React 콘텐츠를 고정 높이 페이지로 나눠라"는 생각보다 어렵다.
+"Split arbitrary React content into fixed-height pages" is harder than it looks.
 
-- 콘텐츠 높이는 **렌더해 보기 전엔 모른다.** 폰트, 줄바꿈, 이미지 로딩에 따라 달라진다.
-- 한 아이템이 **한 페이지(컬럼)보다 클 수 있다.** 그러면 잘라서 이어 붙여야 한다.
-- 폭이 바뀌면(반응형) 줄바꿈이 바뀌어 **높이가 바뀌고**, 페이지 나눔이 통째로 달라진다.
-- 수천 개의 무거운 카드를 넣어도 편집 한 번이 거의 즉시 반영돼야 한다.
+- Content height is **unknown until you render it.** It depends on fonts, line wrapping, and image loading.
+- A single item can be **taller than one page (column).** Then it must be cut and continued.
+- When width changes (responsive), wrapping changes, so **height changes**, and the whole pagination shifts.
+- Even with thousands of heavy cards, a single edit must reflect almost instantly.
 
-순진하게 만들면 "측정이 부정확하거나" "매번 전부 다시 측정해서 느리거나" 둘 중 하나가 된다.
+A naive implementation ends up either "measuring inaccurately" or "re-measuring everything every time, slowly."
 
-## 접근
+## The approach
 
-### 3계층 분리
+### Three-layer separation
 
 ```
-core/      순수 로직 (React/DOM 없음). 측정기(Measurer)를 주입받아 배치만 계산.
-measure/   DOM 측정 어댑터. 오프스크린에 렌더해 getBoundingClientRect로 실제 크기 측정.
-components/ + hooks/  React 컴포넌트와 오케스트레이션.
+core/      Pure logic (no React, no DOM). Takes an injected Measurer and computes placement only.
+measure/   DOM measurement adapter. Renders off-screen and measures real size with getBoundingClientRect.
+components/ + hooks/  React components and orchestration.
 ```
 
-`core/paginate.ts`는 DOM을 모른다. `Measurer` 인터페이스(폭/높이/아이템크기/오버플로우)만 받는다.
-덕분에 가짜 측정기를 주입해 브라우저 없이 결정적으로 유닛테스트할 수 있고, 측정 캐시를 측정기
-인스턴스에 귀속시켜 재계산 사이에 유지할 수 있다.
+`core/paginate.ts` knows nothing about the DOM. It only takes a `Measurer` interface (column width/height, item size, overflow). That lets you inject a fake measurer to unit-test deterministically without a browser, and to attach the measurement cache to the measurer instance so it survives between recomputations.
 
-### 측정은 오프스크린 + 동기 커밋
+### Measurement is off-screen + synchronous commit
 
-높이를 알려면 실제로 렌더해야 한다. measure 어댑터는 화면 밖(`position:absolute; left:-9999px`)에
-컨테이너를 만들고, 그 안에 아이템을 React로 렌더한 뒤 `getBoundingClientRect`로 잰다.
+To know a height you have to actually render. The measure adapter creates a container off-screen (`position:absolute; left:-9999px`), renders the item into it with React, and measures with `getBoundingClientRect`.
 
-핵심은 `flushSync`로 **동기 커밋**한다는 점이다. 렌더 직후 `getBoundingClientRect`를 호출하면
-강제 레이아웃(reflow)이 일어나 그 자리에서 정확한 값이 나온다. 그래서 rAF로 다음 프레임을 기다리지
-않는다(폰트 로딩만 `document.fonts.ready`로, 타임아웃 폴백과 함께 대기). 이게 편집 반영을 빠르게 한다.
+The key is the **synchronous commit** via `flushSync`. Calling `getBoundingClientRect` right after the render forces a reflow and produces an accurate value on the spot. So it does not wait a frame with rAF (only font loading waits, via `document.fonts.ready` with a timeout fallback). This is what makes edits reflect fast.
 
-### 큰 아이템: CSS 멀티컬럼 슬라이스
+### Tall items: CSS multi-column slicing
 
-컬럼 높이를 넘는 아이템은 `columnCount:1` 컨테이너에 넣고 컬럼 높이로 클립한다. 넘친 내용은
-CSS 멀티컬럼 규칙에 따라 **가로로 흐른다.** 흐른 전체 폭(`flowWidth`)을 한 컬럼 폭(`sliceWidth`)으로
-나누면 조각 수가 나온다. 각 조각은 같은 콘텐츠를 `translateX(-index*sliceWidth)`로 밀어 해당 세로
-구간만 보이게 한 뷰다. 콘텐츠를 진짜로 자르거나 복제하지 않고, 한 흐름을 여러 창으로 들여다본다.
+An item taller than the column is put into a `columnCount:1` container and clipped to the column height. The overflow then **flows horizontally** per CSS multi-column rules. Divide the total flowed width (`flowWidth`) by one column's width (`sliceWidth`) and you get the piece count. Each piece is a view of the same content shifted by `translateX(-index*sliceWidth)` so only that vertical band shows. The content is never truly cut or duplicated — you look at one flow through several windows.
 
-### 반응형 폭, 디바운스 재계산
+`break-inside: avoid` is respected by the browser within that flow, which is exactly how `KeepTogether` works: wrapping a block in it keeps the block from being split line-by-line at a piece boundary.
 
-폭은 prop이 아니라 `ResizeObserver`로 컨테이너에서 측정한다. 리사이즈는 매 픽셀마다 재계산하면
-과하므로 `resizeDebounceMs`(기본 150ms) 디바운스 후 한 번 재페이지네이션한다. 높이만 `pageHeight`
-prop으로 받는다(A4 같은 고정 크기는 이 라이브러리의 관심사가 아니다 — 그건 소비자의 PDF 단계).
+### Flow placement, gaps, and tight fill
 
-### per-item 측정 캐시
+Small items accumulate into a column until they overflow, then continue into the next column/page. `itemGap` adds vertical spacing **between** items in a column (never above the first item — flex-col gap semantics) and is added to the running height so the pagination math matches the rendered flex gap exactly; no spacer elements are needed.
 
-측정 캐시 키는 `컬럼폭 | 아이템 콘텐츠 시그니처`다. 시그니처는 노드의 타입·key·props(함수 제외)를
-직렬화한 것으로, `toBlocks` 단계에서 블록마다 한 번 계산해 붙인다.
+By default a boundary item (taller than the leftover space, but smaller than a full column) moves whole to the next column, leaving a gap. `tightFill` changes that: when the leftover exceeds the threshold, the boundary item is sliced with the same multi-column mechanism to fill the leftover and continue. A single slicing primitive handles both "taller than the column" (always sliced) and "taller than the leftover, tight fill on" cases. Atomic boxes that multi-column cannot break (e.g. `inline-block`) fall back to moving whole, detected as a slice count of 1.
 
-- 한 카드만 편집하면 그 카드의 시그니처만 바뀌어 **그 카드만 재측정**되고 나머지는 캐시 히트.
-- 카드 **순서만 바꾸면** 각 카드의 시그니처는 그대로라 측정은 전부 캐시 히트 — 배치(페이지네이션)만
-  다시 계산한다.
-- 전체 재계산 트리거(`streamSignature`)도 블록별 시그니처를 합성해 만들어, 매 렌더 트리를 통째로
-  다시 순회하지 않는다.
+### Responsive width, debounced recompute
 
-### 무한 루프 방지
+Width is not a prop — it is measured from the container with `ResizeObserver`. Recomputing on every pixel is wasteful, so a resize re-paginates once after `resizeDebounceMs` (default 150ms). Only height comes from the `pageHeight` prop (fixed sizes like A4 are not this library's concern — that belongs in the consumer's PDF step).
 
-소비자가 `header`/`footer`/`onPagesGenerated`를 인라인 함수로 넘기는 건 흔하다. 이 함수들의 식별자가
-매 렌더 바뀐다고 측정기를 재생성하면 → 재페이지네이션 → setState → 또 렌더 → 무한 루프가 된다.
-그래서 이 콜백들은 ref로 최신값을 읽고, 측정기 재생성은 헤더/푸터의 **존재 여부**와 실제 측정 차원
-(폭·높이·컬럼 수 등)에만 의존한다.
+### Per-item measurement cache
 
-## 트레이드오프
+The cache key is `column width | item content signature`. The signature is a serialization of the node's type, key, and props (functions excluded), computed once per block in the `toBlocks` step.
 
-- **브라우저 의존.** 정확한 측정을 위해 실제 레이아웃이 필요하다. SSR/Node에선 폭이 0으로 측정돼
-  페이지네이션이 보류된다. 단위테스트(happy-dom)도 `getBoundingClientRect`가 0이라 측정 정확성은
-  검증하지 못하고 캐시·배치 로직만 검증한다. 시각 검증은 Storybook(실제 브라우저)에서 한다.
-- **레이아웃 변경 시 리마운트.** 폭이 바뀌어 카드가 다른 페이지/컬럼으로 옮겨가면, React는 부모가
-  달라진 노드를 옮기지 못하고 언마운트→리마운트한다(reparenting). 안정 key는 같은 부모 안에서만
-  remount를 막는다. 수천 개의 무거운 카드에서 잦은 리사이즈가 비싸질 수 있다(가상화가 진짜 해법이며
-  현재는 미구현).
-- **2-pass 아님.** 마지막 페이지 번호를 미리 알아야 하는 기능(예: "총 N쪽 중 n쪽")은 단일 패스로는
-  안 된다. 복잡도 때문에 의도적으로 빼뒀다 — 첫/홀수/짝수처럼 페이지 번호로 분기하는 헤더/푸터는
-  단일 패스로 동작한다.
-- **스크롤바 더블 페인트.** 폭을 컨테이너에서 측정하므로, 첫 렌더로 세로 스크롤바가 뒤늦게 생기면
-  가용 폭이 줄어 2차 페이지네이션이 일어난다. 스크롤 컨테이너에 `scrollbar-gutter: stable`로 거터를
-  예약하면 사라진다.
+- Editing one card changes only that card's signature, so **only that card is re-measured**; the rest hit the cache.
+- **Reordering** cards keeps each card's signature, so measurement is all cache hits — only placement (pagination) is recomputed.
+- The full recompute trigger (`streamSignature`) is also built by composing per-block signatures, so the whole tree is not re-walked every render.
 
-## 관련 문서
+### Avoiding infinite loops
 
-- [레퍼런스](reference.md) · [How-to](how-to.md) · [튜토리얼](tutorial.md)
+Consumers commonly pass `header`/`footer`/`onPagesGenerated`/`renderItem` as inline functions. If a changing function identity recreated the measurer, that would cause re-pagination → setState → re-render → another loop. So those callbacks are read through refs for their latest value, and measurer recreation depends only on the **presence** of header/footer and the actual measured dimensions (width, height, column count, gaps).
+
+## Trade-offs
+
+- **Browser-dependent.** Accurate measurement needs real layout. In SSR/Node the width measures as 0 and pagination is deferred. Unit tests (happy-dom) also get `getBoundingClientRect` = 0, so they verify cache and placement logic, not measurement accuracy. Visual verification happens in Storybook (a real browser).
+- **Remount on layout change.** When width changes and a card moves to a different page/column, React cannot move a node across a different parent — it unmounts and remounts it (reparenting). A stable key only prevents remount within the same parent. The `renderItem` hook surfaces a stable identity (`info.id`, from the child's React key) so consumers can attach framer-motion `layout`/`layoutId`. Same-column reorders animate as a clean move; boundary-crossing moves remount and use a shared-element transition. With thousands of heavy cards, frequent resizes can get expensive (virtualization is the real fix, and is not implemented yet).
+- **Not two-pass.** Features that need the final page number up front (e.g. "page n of N") cannot be done in a single pass. They are intentionally left out for complexity reasons — headers/footers that branch on the page number (first/odd/even) work in a single pass.
+- **Scrollbar double-paint.** Because width is measured from the container, if a vertical scrollbar appears late on the first render, the available width shrinks and a second pagination runs. Reserve the gutter on the scroll container with `scrollbar-gutter: stable` to remove it.
+
+## Related docs
+
+- [Reference](reference.md) · [How-to](how-to.md) · [Tutorial](tutorial.md)
