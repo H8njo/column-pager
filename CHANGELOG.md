@@ -1,3 +1,21 @@
+# [1.1.0](https://github.com/H8njo/column-pager/compare/v1.0.2...v1.1.0) (2026-06-11)
+
+
+### Bug Fixes
+
+* account for decorator padding/border in overflow slice measurement ([ae4b4e9](https://github.com/H8njo/column-pager/commit/ae4b4e9d78835a275653ec70ebba307bde702b20))
+* preserve item cell height in flex-col columns ([e1f0de0](https://github.com/H8njo/column-pager/commit/e1f0de06946de81a6ffa7924c7388c95f9f242b8))
+
+
+### Features
+
+* add columnGap and bodyClassName props ([2030ee7](https://github.com/H8njo/column-pager/commit/2030ee77e6416c67b28160b8477424a33acada20))
+* add ColumnPager.Decorator control component ([9a07625](https://github.com/H8njo/column-pager/commit/9a076254c871c93c3b5c62e6a329a15852e7baec))
+* add itemGap prop for inter-item vertical spacing ([ea26f9c](https://github.com/H8njo/column-pager/commit/ea26f9cb993f8e015d0ace66ae2f17a9b11d7945))
+* add KeepTogether control to protect items from being split ([3471cee](https://github.com/H8njo/column-pager/commit/3471cee3fae8d6974b3ec352cf2859992d55bdf7))
+* add renderItem wrapper and clipOverflow prop for layout animations ([687dda9](https://github.com/H8njo/column-pager/commit/687dda914b55dbd051afdf1dec2875394feec6d6))
+* add tightFill prop to pack columns by splitting boundary items ([abfdd18](https://github.com/H8njo/column-pager/commit/abfdd18465bcf9a44f869f7aeddad34b7d512046))
+
 ## [1.0.2](https://github.com/H8njo/column-pager/compare/v1.0.1...v1.0.2) (2026-06-06)
 
 
